@@ -48,6 +48,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
     );
 
     final selectedChapters = useState<Map<int, ChapterDto>>({});
+    final isRefreshing = useState(false);
 
     // Refresh manga
     final mangaRefresh = useCallback(([bool onlineFetch = false]) async {
@@ -63,6 +64,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
 
     final refresh = useCallback(([onlineFetch = false]) async {
       if (context.mounted && onlineFetch) {
+        isRefreshing.value = true;
         ref.read(toastProvider)?.show(
               context.l10n.updating,
               withMicrotask: true,
@@ -71,9 +73,13 @@ class MangaDetailsScreen extends HookConsumerWidget {
       await mangaRefresh(onlineFetch);
       await chapterListRefresh(onlineFetch);
       if (context.mounted && onlineFetch) {
-        if (manga.hasError) {
+        isRefreshing.value = false;
+        final chapterState = ref.read(chapterListProvider);
+        if (manga.hasError || chapterState.hasError) {
           ref.read(toastProvider)?.showError(
-                context.l10n.errorSomethingWentWrong,
+                manga.hasError
+                    ? context.l10n.errorSomethingWentWrong
+                    : 'Erro ao carregar capítulos. Tente novamente.',
               );
         } else {
           ref.read(toastProvider)?.show(
@@ -151,10 +157,20 @@ class MangaDetailsScreen extends HookConsumerWidget {
                   title: Text(data?.title ?? context.l10n.manga),
                   actions: [
                     if (context.isTablet) ...[
-                      IconButton(
-                        onPressed: () => refresh(true),
-                        icon: const Icon(Icons.refresh_rounded),
-                      ),
+                      isRefreshing.value
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5),
+                              ),
+                            )
+                          : IconButton(
+                              onPressed: () => refresh(true),
+                              icon: const Icon(Icons.refresh_rounded),
+                            ),
                       IconButton(
                         onPressed: () => showDialog(
                           context: context,

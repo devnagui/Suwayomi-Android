@@ -173,7 +173,18 @@ class DirectionalSwipeGestureHandler extends HookWidget {
       return NavigationAction.pageNavigation;
     }
 
-    // Direction-aware navigation logic
+    // Disable horizontal swipe chapter navigation to prevent accidental
+    // chapter changes. Only vertical/webtoon modes allow swipe chapter nav.
+    final bool isHorizontalMode =
+        resolvedReaderMode == ReaderMode.singleHorizontalLTR ||
+        resolvedReaderMode == ReaderMode.singleHorizontalRTL ||
+        resolvedReaderMode == ReaderMode.continuousHorizontalLTR ||
+        resolvedReaderMode == ReaderMode.continuousHorizontalRTL;
+    if (isHorizontalMode) {
+      return NavigationAction.pageNavigation;
+    }
+
+    // Direction-aware navigation logic for vertical/webtoon modes
     final expectedDirection =
         LastPageSwipeUtils.getExpectedSwipeDirection(resolvedReaderMode);
 
@@ -334,6 +345,9 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     Axis allowedAxis,
   ) {
     if (scrollDirection != allowedAxis) return;
+
+    // Disable horizontal swipe chapter navigation
+    if (scrollDirection == Axis.horizontal) return;
 
     if (details.primaryVelocity == null) return;
 

@@ -5,11 +5,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:graphql/client.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/network/auth_token_refresh.dart';
 import '../../domain/filter/filter_model.dart';
 import '../../domain/manga_page/manga_page.dart';
 import '../../domain/source/source_model.dart';
@@ -20,8 +22,9 @@ part 'source_repository.g.dart';
 
 class SourceRepository {
   final GraphQLClient ferryClient;
+  final Ref ref;
 
-  SourceRepository(this.ferryClient);
+  SourceRepository(this.ferryClient, this.ref);
 
   Future<List<SourceDto>?> getSourceList() =>
       ferryClient.query$SourceList().getData((data) => data.sources.nodes);
@@ -32,8 +35,8 @@ class SourceRepository {
     required int page,
     String? query,
     List<FilterChange>? filters,
-  }) =>
-      ferryClient
+  }) async {
+    Future<MangaPage?> run(GraphQLClient client) => client
           .mutate$FetchSourceManga(
             Options$Mutation$FetchSourceManga(
               variables: Variables$Mutation$FetchSourceManga(
@@ -48,6 +51,19 @@ class SourceRepository {
             ),
           )
           .getData((data) => data.fetchSourceManga);
+
+    try {
+      return await run(ferryClient);
+    } on OperationMessageException catch (error) {
+      final didRefresh = await refreshUiLoginToken(
+        ref: ref,
+        client: ferryClient,
+        exception: error.exception,
+      );
+      if (!didRefresh) rethrow;
+      return run(ref.read(graphQlClientProvider));
+    }
+  }
 
   Future<SourceDto?> getSource(String sourceId) => ferryClient
       .query$SourceById(Options$Query$SourceById(
@@ -84,4 +100,4 @@ class SourceRepository {
 
 @riverpod
 SourceRepository sourceRepository(ref) =>
-    SourceRepository(ref.watch(graphQlClientProvider));
+    SourceRepository(ref.watch(graphQlClientProvider), ref);

@@ -21,7 +21,9 @@ import '../features/settings/presentation/server/widget/credential_popup/credent
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/logger/logger_link.dart';
 import '../utils/mixin/shared_preferences_client_mixin.dart';
+import '../utils/network/auth_refresh_link.dart';
 import '../utils/network/timeout_http_client.dart';
+import '../utils/network/token_manager.dart';
 
 part 'global_providers.g.dart';
 
@@ -70,11 +72,26 @@ GraphQLClient graphQlClient(Ref ref) {
     link = authLink.concat(link);
   }
 
+  // UI Login (JWT) authentication link
+  if (authType == AuthType.uiLogin) {
+    final accessToken = ref.watch(uiLoginAccessTokenProvider);
+    if (accessToken.isNotBlank) {
+      final AuthLink authLink = AuthLink(
+        getToken: () {
+          final currentToken = ref.read(uiLoginAccessTokenProvider);
+          return currentToken.isNotBlank ? 'Bearer $currentToken' : null;
+        },
+      );
+      link = authLink.concat(link);
+    }
+  }
+
   final loggerLink = LoggerLink();
+  link = createAuthRefreshLink(ref, authType).concat(link);
   return GraphQLClient(
     link: loggerLink.concat(link),
     defaultPolicies: DefaultPolicies(
-      query: Policies(fetch: FetchPolicy.noCache),
+      query: Policies(fetch: FetchPolicy.cacheAndNetwork),
     ),
     cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
   );
@@ -84,24 +101,41 @@ GraphQLClient graphQlClient(Ref ref) {
 GraphQLClient graphQlSubscriptionClient(Ref ref) {
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
   final credentials = ref.watch(credentialsProvider);
-  Link link = WebSocketLink(
-      Endpoints.baseApi(
-        baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
-        port: ref.watch(serverPortProvider),
-        addPort: ref.watch(serverPortToggleProvider).ifNull(),
-        isGraphQl: true,
-        isWebsocket: true,
-      ),
-      subProtocol: GraphQLProtocol.graphqlTransportWs);
-  if (authType == AuthType.basic && credentials.isNotBlank) {
-    final AuthLink authLink = AuthLink(getToken: () => credentials);
-    link = authLink.concat(link);
+
+  final wsUrl = Endpoints.baseApi(
+    baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
+    port: ref.watch(serverPortProvider),
+    addPort: ref.watch(serverPortToggleProvider).ifNull(),
+    isGraphQl: true,
+    isWebsocket: true,
+  );
+
+  Link link;
+
+  if (authType == AuthType.uiLogin) {
+    final accessToken = ref.watch(uiLoginAccessTokenProvider);
+    link = WebSocketLink(
+      wsUrl,
+      subProtocol: GraphQLProtocol.graphqlTransportWs,
+    );
+    if (accessToken.isNotBlank) {
+      final AuthLink authLink =
+          AuthLink(getToken: () => 'Bearer $accessToken');
+      link = authLink.concat(link);
+    }
+  } else {
+    link = WebSocketLink(wsUrl,
+        subProtocol: GraphQLProtocol.graphqlTransportWs);
+    if (authType == AuthType.basic && credentials.isNotBlank) {
+      final AuthLink authLink = AuthLink(getToken: () => credentials);
+      link = authLink.concat(link);
+    }
   }
   final loggerLink = LoggerLink();
   return GraphQLClient(
     link: loggerLink.concat(link),
     defaultPolicies: DefaultPolicies(
-      query: Policies(fetch: FetchPolicy.noCache),
+      query: Policies(fetch: FetchPolicy.cacheAndNetwork),
     ),
     cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
   );

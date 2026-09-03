@@ -15,6 +15,7 @@ import '../../features/settings/presentation/server/widget/client/server_port_ti
 import '../../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../global_providers/global_providers.dart';
+import '../network/manga_cache_manager.dart';
 import 'custom_extensions.dart';
 
 extension CacheManagerExtension on CacheManager {
@@ -29,7 +30,7 @@ extension CacheManagerExtension on CacheManager {
       appendApiToUrl: appendApiToUrl,
     )}"
         "$url";
-    return await getSingleFile(
+    return await MangaCacheManager().getSingleFile(
       baseApi,
       headers: authType == AuthType.basic && basicToken != null
           ? {"Authorization": basicToken}

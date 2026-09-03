@@ -8,7 +8,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -16,8 +15,10 @@ import '../../../../../../constants/app_constants.dart';
 import '../../../../../../utils/extensions/cache_manager_extensions.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
+import '../../../../../../utils/network/manga_cache_manager.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/server_image.dart';
+import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
@@ -34,6 +35,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
     this.reverse = false,
     this.scrollDirection = Axis.horizontal,
     this.showReaderLayoutAnimation = false,
+    this.offlineFiles,
   });
 
   final MangaDto manga;
@@ -43,9 +45,10 @@ class SinglePageReaderMode extends HookConsumerWidget {
   final Axis scrollDirection;
   final bool showReaderLayoutAnimation;
   final ChapterPagesDto chapterPages;
+  final List<File>? offlineFiles;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cacheManager = useMemoized(() => DefaultCacheManager());
+    final cacheManager = useMemoized(() => MangaCacheManager());
     final scrollController = usePageController(
       initialPage: chapter.isRead.ifNull()
           ? 0
@@ -93,6 +96,8 @@ class SinglePageReaderMode extends HookConsumerWidget {
     }, [scrollController]);
     final isAnimationEnabled =
         ref.read(readerScrollAnimationProvider).ifNull(true);
+    final bool isPinchToZoomEnabled =
+        ref.read(pinchToZoomProvider).ifNull(true);
     return ReaderWrapper(
       scrollDirection: scrollDirection,
       chapter: chapter,
@@ -132,6 +137,27 @@ class SinglePageReaderMode extends HookConsumerWidget {
             );
           }
 
+          // Use offline file if available
+          if (offlineFiles != null && index < offlineFiles!.length) {
+            final image = Image.file(
+              offlineFiles![index],
+              fit: BoxFit.contain,
+              height: context.height,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.broken_image_rounded,
+                color: Colors.grey,
+              ),
+            );
+            return AppUtils.wrapOn(
+              !kIsWeb &&
+                      (Platform.isAndroid || Platform.isIOS) &&
+                      isPinchToZoomEnabled
+                  ? (child) => InteractiveViewer(maxScale: 5, child: child)
+                  : null,
+              image,
+            );
+          }
+
           final image = ServerImage(
             showReloadButton: true,
             fit: BoxFit.contain,
@@ -144,7 +170,9 @@ class SinglePageReaderMode extends HookConsumerWidget {
             ),
           );
           return AppUtils.wrapOn(
-            !kIsWeb && (Platform.isAndroid || Platform.isIOS)
+            !kIsWeb &&
+                    (Platform.isAndroid || Platform.isIOS) &&
+                    isPinchToZoomEnabled
                 ? (child) => InteractiveViewer(maxScale: 5, child: child)
                 : null,
             image,

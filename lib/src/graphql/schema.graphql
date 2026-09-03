@@ -629,6 +629,7 @@ type ExtensionType {
 input FetchChapterPagesInput {
   chapterId: Int!
   clientMutationId: String
+  format: String
 }
 
 type FetchChapterPagesPayload {
@@ -800,6 +801,28 @@ type ListPreference {
   summary: String
   title: String
   visible: Boolean!
+}
+
+input LoginInput {
+  clientMutationId: String
+  username: String!
+  password: String!
+}
+
+type LoginPayload {
+  clientMutationId: String
+  accessToken: String!
+  refreshToken: String!
+}
+
+input RefreshTokenInput {
+  clientMutationId: String
+  refreshToken: String!
+}
+
+type RefreshTokenPayload {
+  clientMutationId: String
+  accessToken: String!
 }
 
 input LoginTrackerCredentialsInput {
@@ -1051,6 +1074,8 @@ type MultiSelectListPreference {
 }
 
 type Mutation {
+  login(input: LoginInput!): LoginPayload!
+  refreshToken(input: RefreshTokenInput!): RefreshTokenPayload!
   createBackup(input: CreateBackupInput): CreateBackupPayload!
   restoreBackup(input: RestoreBackupInput!): RestoreBackupPayload!
   createCategory(input: CreateCategoryInput!): CreateCategoryPayload

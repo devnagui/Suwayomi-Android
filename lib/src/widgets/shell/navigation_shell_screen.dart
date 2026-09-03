@@ -15,6 +15,7 @@ import '../../features/about/presentation/about/controllers/about_controller.dar
 import '../../features/about/presentation/about/widget/app_update_dialog.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/toast/toast.dart';
+import '../offline_banner.dart';
 import 'big_screen_navigation_bar.dart';
 import 'small_screen_navigation_bar.dart';
 
@@ -95,22 +96,34 @@ class NavigationShellScreen extends HookConsumerWidget {
 
     if (context.isTablet) {
       return Scaffold(
-        body: Row(
+        body: Column(
           children: [
-            BigScreenNavigationBar(
-              selectedIndex: child.currentIndex,
-              onDestinationSelected: (index) => child.goBranch(
-                getAdjustedIndex(index),
-                initialLocation: index == child.currentIndex,
+            const OfflineBanner(),
+            Expanded(
+              child: Row(
+                children: [
+                  BigScreenNavigationBar(
+                    selectedIndex: child.currentIndex,
+                    onDestinationSelected: (index) => child.goBranch(
+                      getAdjustedIndex(index),
+                      initialLocation: index == child.currentIndex,
+                    ),
+                  ),
+                  Expanded(child: child),
+                ],
               ),
             ),
-            Expanded(child: child),
           ],
         ),
       );
     } else {
       return Scaffold(
-        body: child,
+        body: Column(
+          children: [
+            const OfflineBanner(),
+            Expanded(child: child),
+          ],
+        ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         bottomNavigationBar: SmallScreenNavigationBar(
           selectedIndex: getReverseAdjustedIndex(child.currentIndex),

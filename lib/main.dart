@@ -22,6 +22,12 @@ Future<void> main() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   await initHiveForFlutter();
 
+  // Migrate timeout: if user still has old default (5000ms), update to new default (15000ms)
+  final savedTimeout = sharedPreferences.getInt('serverRequestTimeout');
+  if (savedTimeout != null && savedTimeout <= 5000) {
+    await sharedPreferences.setInt('serverRequestTimeout', 15000);
+  }
+
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
   GoRouter.optionURLReflectsImperativeAPIs = true;
   runApp(

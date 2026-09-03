@@ -22,6 +22,7 @@ import 'widgets/reader_navigation_layout_tile/reader_navigation_layout_tile.dart
 import 'widgets/reader_padding_slider/reader_padding_slider.dart';
 import 'widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import 'widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
+import 'widgets/reader_smart_download_tile/reader_smart_download_tile.dart';
 import 'widgets/reader_swipe_toggle_tile/reader_swipe_chapter_toggle_tile.dart';
 import 'widgets/reader_volume_tap_invert_tile/reader_volume_tap_invert_tile.dart';
 import 'widgets/reader_volume_tap_tile/reader_volume_tap_tile.dart';
@@ -48,6 +49,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
           if (!kIsWeb) ...[
             if (Platform.isAndroid || Platform.isIOS) ...[
               const ReaderPinchToZoom(),
+              const ReaderSmartDownloadTile(),
               const ReaderIgnoreSafeAreaTile(),
             ],
             if (Platform.isAndroid) ...[

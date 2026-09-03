@@ -36,6 +36,9 @@
     "@authTypeNone": {
         "description": "Radio button text for no Authentication"
     },
+    "@authTypeUiLogin": {
+        "description": "Radio button text for the UI Login Authentication type"
+    },
     "@authentication": {
         "description": "Section title for server authentication"
     },
@@ -950,6 +953,7 @@
     "authType": "Authentication Type",
     "authTypeBasic": "Basic Auth",
     "authTypeNone": "None",
+    "authTypeUiLogin": "UI Login",
     "authentication": "Authentication",
     "autoDownload": "Auto-download",
     "autoDownloadNewChapters": "Download new chapters",
@@ -1328,5 +1332,8 @@
     "autoRefreshOnTimeoutDescription": "Automatically retries requests that timeout",
     "autoRefreshRetryDelay": "Auto-refresh Retry Delay",
     "@autoRefreshRetryDelay": {"description": "Delay between auto retry attempts in seconds"},
-    "autoRefreshRetryDelayDescription": "Delay between auto retry attempts (in seconds)"
+    "autoRefreshRetryDelayDescription": "Delay between auto retry attempts (in seconds)",
+    "loggedIn": "Logged in",
+    "loggedOut": "Not logged in",
+    "logout": "Logout"
 }

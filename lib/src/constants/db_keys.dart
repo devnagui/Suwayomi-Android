@@ -20,6 +20,8 @@ enum DBKeys {
   isTrueBlack(false),
   authType(AuthType.none),
   basicCredentials(null),
+  uiLoginAccessToken(null),
+  uiLoginRefreshToken(null),
   readerMode(ReaderMode.webtoon),
   readerPadding(0.0),
   readerMagnifierSize(1.0),
@@ -52,12 +54,13 @@ enum DBKeys {
   volumeTapInvert(false),
   hideEmptyCategory(false),
   pinchToZoom(true),
+  smartDownloadNextChapter(false),
   readerIgnoreSafeArea(false),
   flexScheme(FlexScheme.material),
   historyEnabled(true),
   historyRetentionDays(90),
   // Timeout Settings
-  serverRequestTimeout(5000), // milliseconds
+  serverRequestTimeout(15000), // milliseconds
   autoRefreshOnTimeout(false),
   autoRefreshRetryDelay(1000), // milliseconds
   ;

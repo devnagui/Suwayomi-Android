@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
@@ -21,7 +22,7 @@ class MediaLaunchButton extends StatelessWidget {
 
   final Toast? toast;
   final String title;
-  final IconData iconData;
+  final FaIconData iconData;
   final String url;
 
   @override
@@ -31,12 +32,12 @@ class MediaLaunchButton extends StatelessWidget {
             ? IconButton(
                 tooltip: title,
                 onPressed: () => launchUrlInWeb(context, url, toast),
-                icon: Icon(iconData),
+                icon: FaIcon(iconData),
               )
             : TextButton.icon(
                 label: Text(title),
                 onPressed: () => launchUrlInWeb(context, url, toast),
-                icon: Icon(iconData),
+                icon: FaIcon(iconData),
               )
         : const SizedBox.shrink();
   }

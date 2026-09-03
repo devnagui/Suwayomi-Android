@@ -7,10 +7,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../utils/network/manga_cache_manager.dart';
 
 import '../constants/app_sizes.dart';
 import '../constants/endpoints.dart';
@@ -121,7 +122,7 @@ class ServerImage extends HookConsumerWidget {
       key: key.value,
       imageUrl: baseApi,
       height: size?.height,
-      cacheManager: DefaultCacheManager(),
+      cacheManager: MangaCacheManager(),
       httpHeaders: httpHeaders,
       width: size?.width,
       fit: fit ?? BoxFit.cover,

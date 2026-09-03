@@ -48,6 +48,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
     this.scrollDirection = Axis.vertical,
     this.reverse = false,
     this.showReaderLayoutAnimation = false,
+    this.offlineFiles,
   });
 
   final MangaDto manga;
@@ -58,6 +59,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
   final bool reverse;
   final bool showReaderLayoutAnimation;
   final ChapterPagesDto chapterPages;
+  final List<File>? offlineFiles;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -201,28 +203,44 @@ class ContinuousReaderMode extends HookConsumerWidget {
           separatorBuilder: (BuildContext context, int index) =>
               showSeparator ? const Gap(16) : const SizedBox.shrink(),
           itemBuilder: (BuildContext context, int index) {
-            final Widget image = ServerImage(
-              showReloadButton: true,
-              fit: scrollDirection == Axis.vertical
-                  ? BoxFit.fitWidth
-                  : BoxFit.fitHeight,
-              appendApiToUrl: false,
-              imageUrl: chapterPages.pages[index],
-              progressIndicatorBuilder: (_, __, downloadProgress) => Center(
-                child: CircularProgressIndicator(
-                  value: downloadProgress.progress,
+            Widget image;
+
+            // Use offline file if available
+            if (offlineFiles != null && index < offlineFiles!.length) {
+              image = Image.file(
+                offlineFiles![index],
+                fit: scrollDirection == Axis.vertical
+                    ? BoxFit.fitWidth
+                    : BoxFit.fitHeight,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.broken_image_rounded,
+                  color: Colors.grey,
                 ),
-              ),
-              wrapper: (Widget child) => SizedBox(
-                height: scrollDirection == Axis.vertical
-                    ? context.height * .7
-                    : null,
-                width: scrollDirection != Axis.vertical
-                    ? context.width * .7
-                    : null,
-                child: child,
-              ),
-            );
+              );
+            } else {
+              image = ServerImage(
+                showReloadButton: true,
+                fit: scrollDirection == Axis.vertical
+                    ? BoxFit.fitWidth
+                    : BoxFit.fitHeight,
+                appendApiToUrl: false,
+                imageUrl: chapterPages.pages[index],
+                progressIndicatorBuilder: (_, __, downloadProgress) => Center(
+                  child: CircularProgressIndicator(
+                    value: downloadProgress.progress,
+                  ),
+                ),
+                wrapper: (Widget child) => SizedBox(
+                  height: scrollDirection == Axis.vertical
+                      ? context.height * .7
+                      : null,
+                  width: scrollDirection != Axis.vertical
+                      ? context.width * .7
+                      : null,
+                  child: child,
+                ),
+              );
+            }
 
             if (index == 0 || index == chapterPages.chapter.pageCount - 1) {
               final bool reverseDirection =

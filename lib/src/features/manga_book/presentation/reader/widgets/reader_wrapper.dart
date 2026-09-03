@@ -5,7 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_android_volume_keydown/flutter_android_volume_keydown.dart';
@@ -133,11 +135,19 @@ class ReaderWrapper extends HookConsumerWidget {
     final double localMangaReaderPadding =
         ref.watch(readerPaddingKeyProvider) ?? DBKeys.readerPadding.initial;
 
-    final bool readerSwipeChapterToggle =
-        ref.watch(swipeChapterToggleProvider) ?? DBKeys.swipeToggle.initial;
+    // On Android phones, disable swipe gestures that navigate to the
+    // next/previous chapter to avoid accidental chapter changes.
+    final bool disableSwipeChapterNavigation =
+        !kIsWeb && Platform.isAndroid && !context.isTablet;
 
-    final bool lastPageSwipeEnabled = ref.watch(lastPageSwipeEnabledProvider) ??
-        DBKeys.lastPageSwipeEnabled.initial;
+    final bool readerSwipeChapterToggle = disableSwipeChapterNavigation
+        ? false
+        : (ref.watch(swipeChapterToggleProvider) ?? DBKeys.swipeToggle.initial);
+
+    final bool lastPageSwipeEnabled = disableSwipeChapterNavigation
+        ? false
+        : (ref.watch(lastPageSwipeEnabledProvider) ??
+            DBKeys.lastPageSwipeEnabled.initial);
 
     final double localMangaReaderMagnifierSize =
         ref.watch(readerMagnifierSizeKeyProvider) ??
@@ -706,31 +716,9 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
     // Handle both PageMetrics (for PageView) and general ScrollMetrics (for Webtoon)
     if (metrics is PageMetrics) {
       // PageView-based readers (horizontal modes)
-      final currentPage = metrics.page?.round() ?? 0;
-      final totalPages = widget.chapterPages.pages.length;
-
-      final bool atLastPage = currentPage >= (totalPages - 1);
-      final bool atFirstPage = currentPage <= 0;
-
-      // Trigger immediately when user drags past edge more than 10 logical pixels
-      const double kOverscrollThreshold = 10.0;
-
-      if (widget.lastPageSwipeEnabled) {
-        if (atLastPage &&
-            metrics.pixels - metrics.maxScrollExtent > kOverscrollThreshold) {
-          if (!_edgeNavTriggered) {
-            _edgeNavTriggered = true;
-            widget.onNextChapter();
-          }
-        } else if (atFirstPage &&
-            metrics.minScrollExtent - metrics.pixels > kOverscrollThreshold) {
-          if (!_edgeNavTriggered) {
-            _edgeNavTriggered = true;
-            widget.onPreviousChapter();
-          }
-        }
-      }
-
+      // Horizontal swipe chapter navigation is DISABLED to prevent accidental
+      // chapter changes during normal page swiping. Users can still use the
+      // bottom bar buttons to change chapters.
       _isAtMaxExtent = metrics.pixels >= metrics.maxScrollExtent;
       _isAtMinExtent = metrics.pixels <= metrics.minScrollExtent;
 
@@ -774,32 +762,17 @@ class _PageViewEnhancerState extends State<_PageViewEnhancer> {
       return;
     }
 
-    final now = DateTime.now();
-    // Use shorter delay for PageView (paged readers) to feel more responsive
+    // Disable horizontal swipe chapter navigation for paged readers
+    // to prevent accidental chapter changes
     final bool isPagedReader = notification.metrics is PageMetrics;
-    final int triggerDelayMs = isPagedReader ? 50 : 300;
-
-    const double kImmediateThreshold = 2.0;
-
-    // For PageView (paged reader) fire immediately once overscroll crosses tiny threshold
     if (isPagedReader) {
-      if (_isAtMaxExtent && notification.overscroll > kImmediateThreshold) {
-        if (!_edgeNavTriggered) {
-          _edgeNavTriggered = true;
-          widget.onNextChapter();
-        }
-        return;
-      }
-      if (_isAtMinExtent && notification.overscroll < -kImmediateThreshold) {
-        if (!_edgeNavTriggered) {
-          _edgeNavTriggered = true;
-          widget.onPreviousChapter();
-        }
-        return;
-      }
+      return;
     }
 
-    // Fallback for continuous readers (webtoon) – keep delay logic
+    final now = DateTime.now();
+    final int triggerDelayMs = 300;
+
+    // Continuous readers (webtoon) – keep delay logic
     // Check for overscroll at the end (positive overscroll when at max extent)
     if (_isAtMaxExtent && notification.overscroll > 0) {
       if (_maxExtentReachedTime != null &&

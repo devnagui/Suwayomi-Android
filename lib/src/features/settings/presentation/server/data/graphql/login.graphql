@@ -1,0 +1,14 @@
+mutation Login($input: LoginInput!) {
+  login(input: $input) {
+    clientMutationId
+    accessToken
+    refreshToken
+  }
+}
+
+mutation RefreshToken($input: RefreshTokenInput!) {
+  refreshToken(input: $input) {
+    clientMutationId
+    accessToken
+  }
+}

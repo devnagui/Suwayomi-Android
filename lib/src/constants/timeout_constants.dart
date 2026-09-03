@@ -2,9 +2,9 @@
 /// Values are stored in milliseconds.
 class TimeoutConstants {
   // Server request timeout
-  static const int requestTimeoutDefaultMs = 5000;
+  static const int requestTimeoutDefaultMs = 15000;
   static const int requestTimeoutMinMs = 1000;
-  static const int requestTimeoutMaxMs = 30000;
+  static const int requestTimeoutMaxMs = 60000;
 
   // Auto-refresh retry delay
   static const int autoRefreshRetryDelayDefaultMs = 1000;
