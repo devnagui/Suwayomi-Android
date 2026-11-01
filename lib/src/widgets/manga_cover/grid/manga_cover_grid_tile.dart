@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../constants/app_sizes.dart';
-import '../../../constants/gen/assets.gen.dart';
+import '../../../constants/assets.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
 import '../../../features/manga_book/presentation/manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
 import '../../../utils/extensions/custom_extensions.dart';
@@ -114,7 +114,7 @@ class MangaCoverGridTile extends StatelessWidget {
               : SizedBox(
                   height: context.height * .3,
                   child: ImageIcon(
-                    AssetImage(Assets.icons.darkIcon.path),
+                    AssetImage(AppAssets.darkIcon),
                     size: context.height * .2,
                   ),
                 ),

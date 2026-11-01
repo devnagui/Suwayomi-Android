@@ -1,9 +1,9 @@
 
 
 mutation UpdateMangaMetaData($updateMangas: Boolean = false) {
-  setSettings(input: {settings: {updateMangas: $updateMangas}}) {
-    settings {
-      ...SettingsDto
+  setUserSettings(input: {userSettings: {updateMangas: $updateMangas}}) {
+    userSettings {
+      ...UserSettingsDto
     }
   }
 }
@@ -17,25 +17,25 @@ mutation UpdateGlobalUpdateInterval($globalUpdateInterval: Float = 12) {
 }
 
 mutation ToggleExcludeNotStarted($excludeNotStarted: Boolean = false) {
-  setSettings(input: {settings: {excludeNotStarted: $excludeNotStarted}}) {
-    settings {
-      ...SettingsDto
+  setUserSettings(input: {userSettings: {excludeNotStarted: $excludeNotStarted}}) {
+    userSettings {
+      ...UserSettingsDto
     }
   }
 }
 
 mutation ToggleExcludeUnreadChapters($excludeUnreadChapters: Boolean = false) {
-  setSettings(input: {settings: {excludeUnreadChapters: $excludeUnreadChapters}}) {
-    settings {
-      ...SettingsDto
+  setUserSettings(input: {userSettings: {excludeUnreadChapters: $excludeUnreadChapters}}) {
+    userSettings {
+      ...UserSettingsDto
     }
   }
 }
 
 mutation ToggleExcludeCompleted($excludeCompleted: Boolean = false) {
-  setSettings(input: {settings: {excludeCompleted: $excludeCompleted}}) {
-    settings {
-      ...SettingsDto
+  setUserSettings(input: {userSettings: {excludeCompleted: $excludeCompleted}}) {
+    userSettings {
+      ...UserSettingsDto
     }
   }
 }

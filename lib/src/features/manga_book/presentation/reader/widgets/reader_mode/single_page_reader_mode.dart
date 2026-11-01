@@ -6,7 +6,6 @@
 
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -48,7 +47,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
   final List<File>? offlineFiles;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cacheManager = useMemoized(() => MangaCacheManager());
+    final cacheManager = ref.watch(mangaCacheManagerProvider);
     final scrollController = usePageController(
       initialPage: chapter.isRead.ifNull()
           ? 0
@@ -149,9 +148,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
               ),
             );
             return AppUtils.wrapOn(
-              !kIsWeb &&
-                      (Platform.isAndroid || Platform.isIOS) &&
-                      isPinchToZoomEnabled
+              isPinchToZoomEnabled
                   ? (child) => InteractiveViewer(maxScale: 5, child: child)
                   : null,
               image,
@@ -170,9 +167,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
             ),
           );
           return AppUtils.wrapOn(
-            !kIsWeb &&
-                    (Platform.isAndroid || Platform.isIOS) &&
-                    isPinchToZoomEnabled
+            isPinchToZoomEnabled
                 ? (child) => InteractiveViewer(maxScale: 5, child: child)
                 : null,
             image,

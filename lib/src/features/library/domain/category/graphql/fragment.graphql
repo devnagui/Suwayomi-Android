@@ -2,6 +2,7 @@
 fragment CategoryDto on CategoryType {
   defaultCategory : default
   id
+  isDefaultCategory
   includeInDownload
   includeInUpdate
   name

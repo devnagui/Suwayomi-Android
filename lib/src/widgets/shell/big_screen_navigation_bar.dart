@@ -6,7 +6,7 @@
 
 import 'package:flutter/material.dart';
 
-import '../../constants/gen/assets.gen.dart';
+import '../../constants/assets.dart';
 import '../../constants/navigation_bar_data.dart';
 import '../../routes/router_config.dart';
 import '../../utils/extensions/custom_extensions.dart';
@@ -32,11 +32,11 @@ class BigScreenNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget leadingIcon;
-    if (context.isDesktop) {
+    if (context.isExpandedTablet) {
       leadingIcon = TextButton.icon(
         onPressed: () => const AboutRoute().go(context),
         icon: ImageIcon(
-          AssetImage(Assets.icons.darkIcon.path),
+          AssetImage(AppAssets.darkIcon),
           size: 48,
         ),
         label: Text(context.l10n.appTitle),
@@ -48,7 +48,7 @@ class BigScreenNavigationBar extends StatelessWidget {
       leadingIcon = IconButton(
         onPressed: () => const AboutRoute().go(context),
         icon: ImageIcon(
-          AssetImage(Assets.icons.darkIcon.path),
+          AssetImage(AppAssets.darkIcon),
           size: 48,
         ),
       );
@@ -57,8 +57,8 @@ class BigScreenNavigationBar extends StatelessWidget {
     return NavigationRail(
       useIndicator: true,
       elevation: 5,
-      extended: context.isDesktop,
-      labelType: context.isDesktop
+      extended: context.isExpandedTablet,
+      labelType: context.isExpandedTablet
           ? NavigationRailLabelType.none
           : NavigationRailLabelType.all,
       leading: leadingIcon,

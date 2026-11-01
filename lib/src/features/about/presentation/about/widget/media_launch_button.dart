@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../utils/launch_url_in_web.dart';
+import '../../../../../utils/launch_external_url.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 
 class MediaLaunchButton extends StatelessWidget {
@@ -31,12 +31,12 @@ class MediaLaunchButton extends StatelessWidget {
         ? context.isSmallTabletOrLess
             ? IconButton(
                 tooltip: title,
-                onPressed: () => launchUrlInWeb(context, url, toast),
+                onPressed: () => launchExternalUrl(context, url, toast),
                 icon: FaIcon(iconData),
               )
             : TextButton.icon(
                 label: Text(title),
-                onPressed: () => launchUrlInWeb(context, url, toast),
+                onPressed: () => launchExternalUrl(context, url, toast),
                 icon: FaIcon(iconData),
               )
         : const SizedBox.shrink();

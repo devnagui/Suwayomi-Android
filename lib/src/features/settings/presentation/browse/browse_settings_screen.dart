@@ -24,8 +24,15 @@ class BrowseSettingsScreen extends ConsumerWidget {
   Widget build(context, ref) {
     final repository = ref.watch(browseSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
+    final stores = ref.watch(extensionStoresProvider);
     final BrowserSettingsDto? browseSettings = serverSettings.valueOrNull;
-    onRefresh() => ref.refresh(settingsProvider.future);
+    onRefresh() async {
+      await Future.wait([
+        ref.refresh(settingsProvider.future),
+        ref.refresh(extensionStoresProvider.future),
+      ]);
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.browse)),
       body: RefreshIndicator(
@@ -82,11 +89,13 @@ class BrowseSettingsScreen extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.extension_rounded),
                   title: Text(context.l10n.extensionRepository),
-                  subtitle: Text(
-                    (browseSettings?.extensionRepos).isBlank
-                        ? context.l10n.extensionRepositoryDescription
-                        : context.l10n.nRepo(
-                            (browseSettings?.extensionRepos.length).ifNull(0)),
+                  subtitle: stores.showUiWhenData(
+                    context,
+                    (repos) => Text(
+                      repos.isBlank
+                          ? context.l10n.extensionRepositoryDescription
+                          : context.l10n.nRepo(repos!.length),
+                    ),
                   ),
                   onTap: () => const ExtensionRepositoryRoute().go(context),
                 ),

@@ -21,9 +21,10 @@ class InstallExtensionFile extends ConsumerWidget {
     final toast = ref.read(toastProvider);
     final file = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['apk'],
+      allowedExtensions: ['apk', 'jar'],
     );
-    if ((file?.files).isNotBlank) {
+    if (file == null) return;
+    if (file.files.isNotBlank) {
       if (context.mounted) {
         toast?.show(context.l10n.installingExtension);
       }
@@ -32,7 +33,7 @@ class InstallExtensionFile extends ConsumerWidget {
       () async {
         await ref
             .read(extensionRepositoryProvider)
-            .installExtensionFile(context, file: file?.files.single);
+            .installExtensionFile(context, file: file.files.single);
         ref.invalidate(extensionProvider);
         if (context.mounted) {
           toast?.show(context.l10n.extensionInstalled, instantShow: true);

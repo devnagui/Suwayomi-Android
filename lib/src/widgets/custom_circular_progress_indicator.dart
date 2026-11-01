@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../constants/app_sizes.dart';
-import '../constants/gen/assets.gen.dart';
+import '../constants/assets.dart';
 import '../utils/extensions/custom_extensions.dart';
 
 class CenterSorayomiShimmerIndicator extends StatelessWidget {
@@ -33,7 +33,7 @@ class SorayomiShimmerIndicator extends StatelessWidget {
     return Shimmer.fromColors(
       baseColor: context.colorScheme.surface,
       highlightColor: context.theme.indicatorColor,
-      child: ImageIcon(AssetImage(Assets.icons.darkIcon.path)),
+      child: ImageIcon(AssetImage(AppAssets.darkIcon)),
     );
   }
 }

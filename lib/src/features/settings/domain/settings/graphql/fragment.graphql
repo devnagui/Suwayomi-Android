@@ -17,7 +17,6 @@ fragment AutomaticBackupSettingsDto on SettingsType {
 }
 
 fragment BrowserSettingsDto on SettingsType {
-  extensionRepos
   maxSourcesInParallel
   localSourcePath
 }
@@ -33,17 +32,20 @@ fragment CloudFlareBypassDto on SettingsType {
 fragment DownloadsSettingsDto on SettingsType {
   downloadAsCbz
   downloadsPath
-  autoDownloadNewChapters
-  autoDownloadNewChaptersLimit
-  excludeEntryWithUnreadChapters
 }
 
 fragment LibrarySettingsDto on SettingsType {
   globalUpdateInterval
+}
+
+fragment UserSettingsDto on UserSettingsType {
   updateMangas
   excludeCompleted
   excludeNotStarted
   excludeUnreadChapters
+  autoDownloadNewChapters
+  autoDownloadNewChaptersLimit
+  excludeEntryWithUnreadChapters
 }
 
 fragment MiscSettingsDto on SettingsType {

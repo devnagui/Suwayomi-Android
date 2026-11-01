@@ -27,7 +27,7 @@ class CategoryTile extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final order = category.order.getValueOnNullOrNegative();
-    final isDefault = category.id == 0 || category.order == 0;
+    final isDefault = category.isDefaultCategory;
     return Card(
       margin: KEdgeInsets.h16v4.size,
       child: Padding(

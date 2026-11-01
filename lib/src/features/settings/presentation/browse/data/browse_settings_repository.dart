@@ -24,16 +24,25 @@ class BrowseSettingsRepository {
           )
           .getData((data) => data.setSettings.settings);
 
-  Future<SettingsDto?> updateExtensionRepos(Set<String> extensionRepos) =>
-      ferryClient
-          .mutate$UpdateExtensionRepos(
-            Options$Mutation$UpdateExtensionRepos(
-              variables: Variables$Mutation$UpdateExtensionRepos(
-                extensionRepos: extensionRepos.toList(),
-              ),
-            ),
-          )
-          .getData((data) => data.setSettings.settings);
+  Future<void> addExtensionStore(String indexUrl) => ferryClient
+      .mutate$AddExtensionStore(
+        Options$Mutation$AddExtensionStore(
+          variables: Variables$Mutation$AddExtensionStore(
+            indexUrl: indexUrl,
+          ),
+        ),
+      )
+      .getData((data) => data.addExtensionStore);
+
+  Future<void> removeExtensionStore(String indexUrl) => ferryClient
+      .mutate$RemoveExtensionStore(
+        Options$Mutation$RemoveExtensionStore(
+          variables: Variables$Mutation$RemoveExtensionStore(
+            indexUrl: indexUrl,
+          ),
+        ),
+      )
+      .getData((data) => data.removeExtensionStore);
 
   Future<SettingsDto?> updateLocalSourcePath(String value) => ferryClient
       .mutate$UpdateLocalSourcePath(

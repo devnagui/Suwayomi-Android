@@ -4,13 +4,32 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../constants/db_keys.dart';
 import '../../utils/mixin/shared_preferences_client_mixin.dart';
 
 part 'token_manager.g.dart';
+
+class AuthTokenRefresher {
+  Future<bool>? _pending;
+
+  Future<bool> refresh(Future<bool> Function() action) async {
+    final pending = _pending;
+    if (pending != null) return pending;
+    final next = action();
+    _pending = next;
+    try {
+      return await next;
+    } finally {
+      _pending = null;
+    }
+  }
+}
+
+final authTokenRefresherProvider = Provider<AuthTokenRefresher>(
+  (ref) => AuthTokenRefresher(),
+);
 
 @riverpod
 class UiLoginAccessToken extends _$UiLoginAccessToken

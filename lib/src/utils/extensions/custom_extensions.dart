@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +21,7 @@ import '../../widgets/custom_circular_progress_indicator.dart';
 import '../../widgets/emoticons.dart';
 import '../callbacks.dart';
 import '../logger/logger.dart';
+import '../logger/operation_log.dart';
 import '../misc/app_utils.dart';
 import '../misc/toast/toast.dart';
 

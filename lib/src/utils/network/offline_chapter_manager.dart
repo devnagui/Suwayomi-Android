@@ -8,21 +8,17 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../constants/endpoints.dart';
-import '../../constants/enum.dart';
 import '../../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
-import '../../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
 import '../../global_providers/global_providers.dart';
 import '../extensions/custom_extensions.dart';
+import 'auth_http_client.dart';
 
 part 'offline_chapter_manager.g.dart';
 
@@ -44,22 +40,25 @@ class LocalDownloadProgress {
     this.error,
   });
 
-  double get progress =>
-      totalPages > 0 ? downloadedPages / totalPages : 0.0;
+  double get progress => totalPages > 0 ? downloadedPages / totalPages : 0.0;
 }
 
 /// Manages local chapter downloads for offline reading.
 /// Stores chapter pages as image files in app documents.
 class OfflineChapterManager {
-  OfflineChapterManager(this._ref);
+  OfflineChapterManager(this._ref,
+      {Future<Directory> Function()? documentsDirectory})
+      : _documentsDirectory =
+            documentsDirectory ?? getApplicationDocumentsDirectory;
 
   final Ref _ref;
+  final Future<Directory> Function() _documentsDirectory;
 
   static const _metadataKey = 'offline_chapters_metadata';
 
   /// Get the base directory for offline manga storage
   Future<Directory> _getBaseDir() async {
-    final appDir = await getApplicationDocumentsDirectory();
+    final appDir = await _documentsDirectory();
     final dir = Directory(p.join(appDir.path, 'offline_manga'));
     if (!await dir.exists()) {
       await dir.create(recursive: true);
@@ -70,8 +69,7 @@ class OfflineChapterManager {
   /// Get directory for a specific chapter's pages
   Future<Directory> _getChapterDir(int mangaId, int chapterId) async {
     final baseDir = await _getBaseDir();
-    final dir =
-        Directory(p.join(baseDir.path, '$mangaId', '$chapterId'));
+    final dir = Directory(p.join(baseDir.path, '$mangaId', '$chapterId'));
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -88,19 +86,6 @@ class OfflineChapterManager {
     );
   }
 
-  /// Get auth headers for HTTP requests
-  Map<String, String> _getHeaders() {
-    final authType = _ref.read(authTypeKeyProvider);
-    final basicToken = _ref.read(credentialsProvider);
-    final headers = <String, String>{
-      'Content-Type': 'application/json; charset=utf-8',
-    };
-    if (authType == AuthType.basic && basicToken != null) {
-      headers['Authorization'] = basicToken;
-    }
-    return headers;
-  }
-
   /// Download all pages of a chapter locally.
   /// [pageUrls] should be the list of page URL paths from fetchChapterPages.
   Stream<LocalDownloadProgress> downloadChapter({
@@ -110,7 +95,6 @@ class OfflineChapterManager {
   }) async* {
     final chapterDir = await _getChapterDir(mangaId, chapterId);
     final baseApi = _buildBaseApi();
-    final headers = _getHeaders();
     final totalPages = pageUrls.length;
 
     for (int i = 0; i < totalPages; i++) {
@@ -129,7 +113,8 @@ class OfflineChapterManager {
         }
 
         final url = '$baseApi${pageUrls[i]}';
-        final response = await http.get(Uri.parse(url), headers: headers);
+        final response =
+            await _ref.read(serverMediaHttpClientProvider).get(Uri.parse(url));
 
         if (response.statusCode == 200) {
           await pageFile.writeAsBytes(response.bodyBytes);

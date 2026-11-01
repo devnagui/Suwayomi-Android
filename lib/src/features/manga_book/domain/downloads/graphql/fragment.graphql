@@ -3,13 +3,17 @@ fragment DownloadDto on DownloadType {
         id
         name
         sourceOrder
-        isDownloaded
+        user {
+            isDownloaded
+        }
     }
 
     manga {
         id
         title
-        downloadCount
+        user {
+            downloadCount
+        }
         thumbnailUrl
     }
     progress

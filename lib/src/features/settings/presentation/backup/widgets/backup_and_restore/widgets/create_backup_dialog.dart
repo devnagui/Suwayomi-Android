@@ -4,7 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../../constants/endpoints.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../../../utils/launch_url_in_web.dart';
+import '../../../../../../../utils/launch_external_url.dart';
 import '../../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../../widgets/async_buttons/async_elevated_button.dart';
 import '../../../../../../../widgets/popup_widgets/pop_button.dart';
@@ -57,7 +57,7 @@ class CreateBackupDialog extends HookConsumerWidget {
               return;
             }
 
-            launchUrlInWeb(
+            launchExternalUrl(
               context,
               Endpoints.baseApi(
                     baseUrl: ref.read(serverUrlProvider),

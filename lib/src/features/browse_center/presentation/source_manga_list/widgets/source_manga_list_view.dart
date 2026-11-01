@@ -86,7 +86,9 @@ class SourceMangaListView extends ConsumerWidget {
             if (value == null) return;
             if (value is! AsyncError) {
               final items = [...?controller.itemList];
-              items[index] = item.copyWith(inLibrary: !item.inLibrary.ifNull());
+              items[index] = item.copyWith(
+                user: item.user.copyWith(inLibrary: !item.inLibrary),
+              );
               controller.itemList = items;
             }
           },

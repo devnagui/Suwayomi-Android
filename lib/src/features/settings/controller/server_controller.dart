@@ -1,3 +1,4 @@
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../utils/extensions/custom_extensions.dart';
@@ -15,3 +16,17 @@ class Settings extends _$Settings {
   void updateState(SettingsDto value) =>
       state = state.copyWithData((_) => value);
 }
+
+@riverpod
+class UserSettings extends _$UserSettings {
+  @override
+  Future<UserSettingsDto?> build() =>
+      ref.watch(settingsRepositoryProvider).getUserSettings();
+
+  void updateState(UserSettingsDto value) =>
+      state = state.copyWithData((_) => value);
+}
+
+@riverpod
+Future<List<String>?> extensionStores(Ref ref) =>
+    ref.watch(settingsRepositoryProvider).getExtensionStores();

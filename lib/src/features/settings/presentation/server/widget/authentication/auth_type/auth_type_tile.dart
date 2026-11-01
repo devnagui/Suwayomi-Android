@@ -28,7 +28,12 @@ class AuthTypeTile extends ConsumerWidget {
         builder: (context) => RadioListPopup<AuthType>(
           title: context.l10n.authType,
           optionList: AuthType.values,
-          getOptionTitle: (value) => value.toLocale(context),
+          getOptionTitle: (value) => value == AuthType.basic
+              ? context.l10n.authTypeBasicLegacy
+              : value.toLocale(context),
+          getOptionSubtitle: (value) => value == AuthType.basic
+              ? context.l10n.authTypeBasicLegacyDescription
+              : null,
           value: authType ?? AuthType.none,
           onChange: (enumValue) {
             ref.read(authTypeKeyProvider.notifier).update(enumValue);

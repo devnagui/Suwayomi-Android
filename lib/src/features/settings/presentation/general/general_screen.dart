@@ -12,6 +12,7 @@ import '../../../../global_providers/global_providers.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/popup_widgets/radio_list_popup.dart';
+import 'cache_recovery_section.dart';
 import 'quick_search_toggle/quick_search_toggle_tile.dart';
 import 'timeout_settings/timeout_settings_section.dart';
 
@@ -43,19 +44,8 @@ class GeneralScreen extends ConsumerWidget {
               ),
             ),
           ),
-          //TODO: Implement clear cache
-
-          // ListTile(
-          //   leading: const Icon(Icons.cleaning_services_rounded),
-          //   title: Text(context.l10n.clearCache),
-          //   onTap: () async {
-          //     await ref.read(graphQlClientProvider).;
-          //     DefaultCacheManager().emptyCache();
-          //     if (context.mounted) {
-          //       ref.read(toastProvider)?.show(context.l10n.cacheCleared);
-          //     }
-          //   },
-          // ),
+          const LocalCacheActions(),
+          const OperationLogTile(),
           const QuickSearchToggleTile(),
           const TimeoutSettingsSection(),
         ],

@@ -4,10 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:io';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -68,10 +66,9 @@ class QuickSearchShortcutWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Shortcuts(
       shortcuts: {
-        SingleActivator(
+        const SingleActivator(
           LogicalKeyboardKey.keyP,
-          control: kIsWeb || !Platform.isMacOS,
-          meta: kIsWeb ? false : Platform.isMacOS,
+          control: true,
         ): ShowQuickOpenIntent(),
         const SingleActivator(LogicalKeyboardKey.escape): HideQuickOpenIntent(),
       },

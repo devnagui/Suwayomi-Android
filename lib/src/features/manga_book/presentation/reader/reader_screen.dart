@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +19,7 @@ import '../../../settings/presentation/reader/widgets/reader_ignore_safe_area_ti
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_smart_download_tile/reader_smart_download_tile.dart';
 import '../../data/manga_book/manga_book_repository.dart';
+import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
@@ -68,7 +68,6 @@ class ReaderScreen extends HookConsumerWidget {
     final chapterPagesLoaded = chapterPages.valueOrNull != null;
     useEffect(() {
       if (!smartDownloadEnabled) return null;
-      if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return null;
       if (nextChapterId == null || !chapterPagesLoaded) return null;
       // Defer so we don't enqueue during the first build frame.
       Future.microtask(() {
@@ -255,7 +254,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 manga: data,
                                 onPageChanged: onPageChanged,
                                 chapterPages: chapterPagesData,
-                            offlineFiles: offlineFiles,
+                                offlineFiles: offlineFiles,
                               ),
                             ReaderMode.singleHorizontalRTL =>
                               SinglePageReaderMode(
@@ -266,7 +265,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
-                            offlineFiles: offlineFiles,
+                                offlineFiles: offlineFiles,
                               ),
                             ReaderMode.singleVertical => SinglePageReaderMode(
                                 chapter: chapterData,
@@ -276,7 +275,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
-                            offlineFiles: offlineFiles,
+                                offlineFiles: offlineFiles,
                               ),
                             ReaderMode.continuousHorizontalLTR =>
                               ContinuousReaderMode(
@@ -287,7 +286,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
-                            offlineFiles: offlineFiles,
+                                offlineFiles: offlineFiles,
                               ),
                             ReaderMode.continuousHorizontalRTL =>
                               ContinuousReaderMode(
@@ -299,7 +298,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
-                            offlineFiles: offlineFiles,
+                                offlineFiles: offlineFiles,
                               ),
                             ReaderMode.continuousVertical =>
                               ContinuousReaderMode(
@@ -310,7 +309,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
-                            offlineFiles: offlineFiles,
+                                offlineFiles: offlineFiles,
                               ),
                             ReaderMode.webtoon || _ => ContinuousReaderMode(
                                 chapter: chapterData,
@@ -319,7 +318,7 @@ class ReaderScreen extends HookConsumerWidget {
                                 showReaderLayoutAnimation:
                                     showReaderLayoutAnimation,
                                 chapterPages: chapterPagesData,
-                            offlineFiles: offlineFiles,
+                                offlineFiles: offlineFiles,
                               ),
                           }
                       };

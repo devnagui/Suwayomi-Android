@@ -5,3 +5,25 @@ query ServerSettings {
         ...SettingsDto
     }
 }
+
+query UserSettings {
+    userSettings {
+        ...UserSettingsDto
+    }
+}
+
+query ExtensionStores {
+    extensionStores {
+        nodes {
+            indexUrl
+        }
+    }
+}
+
+query ExistingLocalMangas($ids: [Int!]!) {
+    mangas(filter: {id: {in: $ids}}, first: 100) {
+        nodes {
+            id
+        }
+    }
+}

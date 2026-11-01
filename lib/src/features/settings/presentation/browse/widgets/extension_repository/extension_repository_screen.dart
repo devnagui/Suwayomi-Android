@@ -16,11 +16,8 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
   @override
   Widget build(context, ref) {
     final repository = ref.watch(browseSettingsRepositoryProvider);
-    final serverSettings = ref.watch(settingsProvider);
-    final List<String> repoList = [
-      ...?serverSettings.valueOrNull?.extensionRepos
-    ];
-    onRefresh() => ref.refresh(settingsProvider.future);
+    final stores = ref.watch(extensionStoresProvider);
+    onRefresh() => ref.refresh(extensionStoresProvider.future);
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.extensionRepository)),
       floatingActionButton: FloatingActionButton(
@@ -34,13 +31,13 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
             ),
           );
           if (newUrl.isNotBlank && newUrl.isUrl) {
-            final result = await AppUtils.guard(
-              () => repository.updateExtensionRepos({...repoList, newUrl!}),
+            await AppUtils.guard(
+              () async {
+                await repository.addExtensionStore(newUrl!);
+                ref.invalidate(extensionStoresProvider);
+              },
               ref.read(toastProvider),
             );
-            if (result != null) {
-              ref.read(settingsProvider.notifier).updateState(result);
-            }
           } else if (context.mounted) {
             ref.read(toastProvider)?.showError(
                 context.l10n.invalidProp(context.l10n.extensionRepository));
@@ -50,65 +47,63 @@ class ExtensionRepositoryScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: onRefresh,
-        child: repoList.isNotBlank
-            ? ListView.builder(
-                itemCount: (repoList.length).ifNull(),
-                itemBuilder: (context, index) {
-                  final repo = repoList[index];
-                  if (repo.isBlank) return const SizedBox.shrink();
-                  return Card(
-                    margin: KEdgeInsets.a8.size,
-                    child: ListTile(
-                      title: Text(
-                        repo,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+        child: stores.showUiWhenData(
+          context,
+          (repoList) => repoList.isNotBlank
+              ? ListView.builder(
+                  itemCount: repoList!.length,
+                  itemBuilder: (context, index) {
+                    final repo = repoList[index];
+                    if (repo.isBlank) return const SizedBox.shrink();
+                    return Card(
+                      margin: KEdgeInsets.a8.size,
+                      child: ListTile(
+                        title: Text(
+                          repo,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.copy_rounded),
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                    ClipboardData(text: repo));
+                                if (context.mounted) {
+                                  ref
+                                      .read(toastProvider)
+                                      ?.show(context.l10n.copied);
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_rounded),
+                              onPressed: () async {
+                                await AppUtils.guard(() async {
+                                  await repository.removeExtensionStore(repo);
+                                  ref.invalidate(extensionStoresProvider);
+                                }, ref.read(toastProvider));
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.copy_rounded),
-                            onPressed: () async {
-                              await Clipboard.setData(
-                                  ClipboardData(text: repo));
-                              if (context.mounted) {
-                                ref
-                                    .read(toastProvider)
-                                    ?.show(context.l10n.copied);
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_rounded),
-                            onPressed: () async {
-                              final newList = {...repoList}..remove(repo);
-                              final result = await AppUtils.guard(
-                                  () =>
-                                      repository.updateExtensionRepos(newList),
-                                  ref.read(toastProvider));
-                              if (result != null) {
-                                ref
-                                    .read(settingsProvider.notifier)
-                                    .updateState(result);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              )
-            : Emoticons(
-                title:
-                    context.l10n.noPropFound(context.l10n.extensionRepository),
-                subTitle: context.l10n.extensionRepositoryDescription,
-                button: TextButton(
-                  onPressed: onRefresh,
-                  child: Text(context.l10n.refresh),
+                    );
+                  },
+                )
+              : Emoticons(
+                  title: context.l10n
+                      .noPropFound(context.l10n.extensionRepository),
+                  subTitle: context.l10n.extensionRepositoryDescription,
+                  button: TextButton(
+                    onPressed: onRefresh,
+                    child: Text(context.l10n.refresh),
+                  ),
                 ),
-              ),
+          refresh: onRefresh,
+        ),
       ),
     );
   }

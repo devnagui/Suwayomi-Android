@@ -49,13 +49,9 @@ extension ContextExtensions on BuildContext {
   Size get mediaQuerySize => MediaQuery.of(this).size;
 
   /// The same of [MediaQuery.of(context).size.height]
-  /// Note: updates when you resize your screen (like on a browser or
-  /// desktop window)
   double get height => mediaQuerySize.height;
 
   /// The same of [MediaQuery.of(context).size.width]
-  /// Note: updates when you resize your screen (like on a browser or
-  /// desktop window)
   double get width => mediaQuerySize.width;
 
   ///
@@ -181,14 +177,7 @@ extension ContextExtensions on BuildContext {
   /// True if the current device is Tablet
   bool get isTablet => isSmallTabletOrWider;
 
-  /// True if the width is less than 1200p
-  bool get isDesktopOrLess => width <= 1200;
-
-  /// True if the width is greater than 1200p
-  bool get isDesktopOrWider => width >= 1200;
-
-  /// True if the width is greater than 1200p
-  bool get isDesktop => isDesktopOrWider;
+  bool get isExpandedTablet => width >= 1200;
 
   AppLocalizations get l10n => AppLocalizations.of(this)!;
 
@@ -200,7 +189,7 @@ extension ContextExtensions on BuildContext {
 
   /// Returns a specific value according to the screen size
   /// if the device width is greater than or equal to 1200 return
-  /// [desktop] value. if the device width is greater than  or equal to 600
+  /// [expandedTablet] value. if the device width is greater than  or equal to 600
   /// and less than 1200 return [tablet] value.
   /// if the device width is less than 300  return [watch] value.
   /// in other cases return [mobile] value.
@@ -208,15 +197,17 @@ extension ContextExtensions on BuildContext {
     T? watch,
     T? mobile,
     T? tablet,
-    T? desktop,
+    T? expandedTablet,
   }) {
-    assert(
-        watch != null || mobile != null || tablet != null || desktop != null);
+    assert(watch != null ||
+        mobile != null ||
+        tablet != null ||
+        expandedTablet != null);
 
     var deviceWidth = mediaQuerySize.width;
     //big screen width can display less sizes
     final strictValues = [
-      if (deviceWidth >= 1200) desktop, //desktop is allowed
+      if (deviceWidth >= 1200) expandedTablet,
       if (deviceWidth >= 600) tablet, //tablet is allowed
       if (deviceWidth >= 300) mobile, //mobile is allowed
       watch, //watch is allowed
@@ -225,7 +216,7 @@ extension ContextExtensions on BuildContext {
       watch,
       mobile,
       tablet,
-      desktop,
+      expandedTablet,
     ].whereType<T>();
     return strictValues.firstOrNull ?? looseValues.first;
   }

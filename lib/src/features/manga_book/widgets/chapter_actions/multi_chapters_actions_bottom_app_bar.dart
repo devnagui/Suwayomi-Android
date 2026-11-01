@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/app_sizes.dart';
-import '../../../../constants/gen/assets.gen.dart';
+import '../../../../constants/assets.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../data/downloads/downloads_repository.dart';
@@ -69,7 +69,7 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
                   if (firstChapter.index > chapter.index) chapter.id
               ],
               icon: ImageIcon(
-                Assets.icons.previousDone.provider(),
+                const AssetImage(AppAssets.previousDone),
                 color: context.theme.cardTheme.color,
               ),
               change: ChapterChange(isRead: true),

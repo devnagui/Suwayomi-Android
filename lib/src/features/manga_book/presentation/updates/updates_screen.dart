@@ -142,12 +142,17 @@ class UpdatesScreen extends HookConsumerWidget {
                 updatePair: () async {
                   final chapter = await ref
                       .refresh(chapterProvider(chapterId: item.id).future);
+                  if (chapter == null) {
+                    throw StateError('Chapter update returned no data');
+                  }
                   try {
                     controller.itemList = [...?controller.itemList]
                       ..replaceRange(index, index + 1, [
                         item.copyWith(
-                          isDownloaded: chapter?.isDownloaded,
-                          lastPageRead: chapter?.lastPageRead,
+                          user: item.user.copyWith(
+                            isDownloaded: chapter.isDownloaded,
+                            lastPageRead: chapter.lastPageRead,
+                          ),
                         ),
                       ]);
                   } catch (e) {

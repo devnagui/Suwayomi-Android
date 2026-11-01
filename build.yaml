@@ -13,6 +13,8 @@ targets:
             - graphql
             - graphql_flutter
           scalars:
+            Duration:
+              type: String
             ISODateTime:
               type: DateTime
             JSON:
@@ -28,7 +30,7 @@ targets:
               toJsonFunctionName: longStringToJson
               import: package:tachidesk_sorayomi/src/utils/misc/scalars.dart
             Cursor:
-              type: int
+              type: String
               fromJsonFunctionName: cursorFromJson
               toJsonFunctionName: cursorToJson
               import: package:tachidesk_sorayomi/src/utils/misc/scalars.dart

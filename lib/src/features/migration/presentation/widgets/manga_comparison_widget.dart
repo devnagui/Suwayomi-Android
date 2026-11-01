@@ -55,7 +55,6 @@ class MangaComparisonWidget extends StatelessWidget {
               _buildMangaInfo(
                   context, targetManga, 'To (Target)', Icons.adjust),
             ]
-            // Tablet/Desktop layout (horizontal comparison)
             else ...[
               Row(
                 children: [

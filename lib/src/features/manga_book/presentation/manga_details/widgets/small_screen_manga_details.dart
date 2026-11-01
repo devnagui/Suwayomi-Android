@@ -3,7 +3,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -37,12 +36,9 @@ class SmallScreenMangaDetails extends ConsumerStatefulWidget {
 
   /// Number of chapters to show initially on Android for lazy loading
   static const int _initialChunkSize = 50;
+
   /// Number of chapters to load per "Load More" tap
   static const int _loadMoreChunkSize = 50;
-
-  /// Whether lazy loading should be used (Android only, non-web)
-  static bool get _useLazyLoad =>
-      !kIsWeb && Platform.isAndroid;
 
   @override
   ConsumerState<SmallScreenMangaDetails> createState() =>
@@ -58,9 +54,7 @@ class _SmallScreenMangaDetailsState
     final filteredChapterList = widget.chapterList.valueOrNull;
     final totalCount = filteredChapterList?.length ?? 0;
 
-    // On Android, limit visible chapters; on other platforms show all
-    final bool useLazy = SmallScreenMangaDetails._useLazyLoad &&
-        totalCount > _visibleCount;
+    final bool useLazy = totalCount > _visibleCount;
     final int displayCount = useLazy ? _visibleCount : totalCount;
 
     return RefreshIndicator(
@@ -104,8 +98,8 @@ class _SmallScreenMangaDetailsState
                           child: ElevatedButton.icon(
                             onPressed: () {
                               setState(() {
-                                _visibleCount += SmallScreenMangaDetails
-                                    ._loadMoreChunkSize;
+                                _visibleCount +=
+                                    SmallScreenMangaDetails._loadMoreChunkSize;
                               });
                             },
                             icon: const Icon(Icons.expand_more),
@@ -122,8 +116,7 @@ class _SmallScreenMangaDetailsState
                         updateData: () => widget.onRefresh(false),
                         isSelected: widget.selectedChapters.value
                             .containsKey(filteredChapterList[index].id),
-                        canTapSelect:
-                            widget.selectedChapters.value.isNotEmpty,
+                        canTapSelect: widget.selectedChapters.value.isNotEmpty,
                         toggleSelect: (ChapterDto val) {
                           if ((val.id).isNull) return;
                           widget.selectedChapters.value = widget

@@ -7,7 +7,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -31,10 +30,6 @@ class ConnectivityStatus extends _$ConnectivityStatus {
   }
 
   Future<void> _check() async {
-    if (kIsWeb) {
-      state = true;
-      return;
-    }
     try {
       final result = await InternetAddress.lookup('google.com')
           .timeout(const Duration(seconds: 5));

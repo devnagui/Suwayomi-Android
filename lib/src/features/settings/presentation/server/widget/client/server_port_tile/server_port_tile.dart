@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -29,7 +28,7 @@ class ServerPortToggle extends _$ServerPortToggle
   @override
   bool? build() => initialize(
         DBKeys.serverPortToggle,
-        initial: kIsWeb ? false : DBKeys.serverPortToggle.initial,
+        initial: DBKeys.serverPortToggle.initial,
       );
 }
 

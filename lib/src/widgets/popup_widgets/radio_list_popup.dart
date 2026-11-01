@@ -26,7 +26,7 @@ class RadioListPopup<T> extends StatelessWidget {
   final T value;
   final ValueChanged<T> onChange;
   final String Function(T)? getOptionTitle;
-  final String Function(T)? getOptionSubtitle;
+  final String? Function(T)? getOptionSubtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -59,15 +59,16 @@ class RadioList<T> extends StatelessWidget {
   final T value;
   final ValueChanged<T> onChange;
   final String Function(T)? getTitle;
-  final String Function(T)? getSubtitle;
+  final String? Function(T)? getSubtitle;
 
   Widget getRadioListTile(BuildContext context, T option) {
+    final subtitle = getSubtitle?.call(option);
     return RadioListTile<T>(
       activeColor: context.theme.indicatorColor,
       title: Text(
         getTitle?.call(option) ?? option.toString(),
       ),
-      subtitle: getSubtitle != null ? (Text(getSubtitle!(option))) : null,
+      subtitle: subtitle == null ? null : Text(subtitle),
       value: option,
       groupValue: value,
       onChanged: (value) {

@@ -47,6 +47,12 @@ GraphQLClient graphQlClient(Ref ref) {
       ? ((timeoutMs / retryDelayMs).ceil() - 1).clamp(0, 10)
       : 0; // cap at 10 retries for safety
 
+  final httpClient = TimeoutHttpClient(
+    Duration(milliseconds: effectiveTimeoutMs),
+    retries: retryCount,
+    retryDelay: Duration(milliseconds: retryDelayMs),
+  );
+  ref.onDispose(httpClient.close);
   Link link = HttpLink(
     Endpoints.baseApi(
       baseUrl: ref.watch(serverUrlProvider) ?? DBKeys.serverUrl.initial,
@@ -57,11 +63,7 @@ GraphQLClient graphQlClient(Ref ref) {
     followRedirects: true,
     // httpResponseDecoder: httpResponseDecoder,
     defaultHeaders: {'Content-Type': 'application/json; charset=utf-8'},
-    httpClient: TimeoutHttpClient(
-      Duration(milliseconds: effectiveTimeoutMs),
-      retries: retryCount,
-      retryDelay: Duration(milliseconds: retryDelayMs),
-    ),
+    httpClient: httpClient,
   );
 
   // Auto retry is handled by TimeoutHttpClient retries instead of RetryLink
@@ -74,16 +76,19 @@ GraphQLClient graphQlClient(Ref ref) {
 
   // UI Login (JWT) authentication link
   if (authType == AuthType.uiLogin) {
-    final accessToken = ref.watch(uiLoginAccessTokenProvider);
-    if (accessToken.isNotBlank) {
-      final AuthLink authLink = AuthLink(
-        getToken: () {
-          final currentToken = ref.read(uiLoginAccessTokenProvider);
-          return currentToken.isNotBlank ? 'Bearer $currentToken' : null;
-        },
-      );
-      link = authLink.concat(link);
-    }
+    ref.watch(uiLoginAccessTokenProvider
+        .select((token) => token?.trim().isNotEmpty == true));
+    final AuthLink authLink = AuthLink(
+      getToken: () {
+        final currentToken = ref.read(uiLoginAccessTokenProvider)?.trim();
+        return currentToken.isNotBlank ? 'Bearer $currentToken' : null;
+      },
+    );
+    link = Link.split(
+      (request) => request.operation.operationName == 'RefreshToken',
+      link,
+      authLink.concat(link),
+    );
   }
 
   final loggerLink = LoggerLink();
@@ -110,27 +115,25 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
     isWebsocket: true,
   );
 
-  Link link;
-
-  if (authType == AuthType.uiLogin) {
-    final accessToken = ref.watch(uiLoginAccessTokenProvider);
-    link = WebSocketLink(
-      wsUrl,
-      subProtocol: GraphQLProtocol.graphqlTransportWs,
-    );
-    if (accessToken.isNotBlank) {
-      final AuthLink authLink =
-          AuthLink(getToken: () => 'Bearer $accessToken');
-      link = authLink.concat(link);
-    }
-  } else {
-    link = WebSocketLink(wsUrl,
-        subProtocol: GraphQLProtocol.graphqlTransportWs);
-    if (authType == AuthType.basic && credentials.isNotBlank) {
-      final AuthLink authLink = AuthLink(getToken: () => credentials);
-      link = authLink.concat(link);
-    }
-  }
+  ref.watch(uiLoginAccessTokenProvider);
+  final link = WebSocketLink(
+    wsUrl,
+    subProtocol: GraphQLProtocol.graphqlTransportWs,
+    config: SocketClientConfig(
+      headers: {
+        if (authType == AuthType.basic && credentials.isNotBlank)
+          'Authorization': credentials!,
+      },
+      initialPayload: () {
+        final token = ref.read(uiLoginAccessTokenProvider);
+        return {
+          if (authType == AuthType.uiLogin && token.isNotBlank)
+            'Authorization': token!,
+        };
+      },
+    ),
+  );
+  ref.onDispose(() => link.dispose());
   final loggerLink = LoggerLink();
   return GraphQLClient(
     link: loggerLink.concat(link),

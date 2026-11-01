@@ -14,14 +14,16 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../constants/app_sizes.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/launch_url_in_web.dart';
+import '../../../../utils/launch_external_url.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../migration/domain/migration_models.dart';
+import '../../../settings/presentation/general/cache_recovery_section.dart';
 import '../../domain/chapter/chapter_model.dart';
+import '../../domain/manga/manga_model.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
 import 'controller/manga_details_controller.dart';
 import 'widgets/big_screen_manga_details.dart';
@@ -156,6 +158,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
               : AppBar(
                   title: Text(data?.title ?? context.l10n.manga),
                   actions: [
+                    LocalCacheActions(mangaId: mangaId),
                     if (context.isTablet) ...[
                       isRefreshing.value
                           ? const Padding(
@@ -163,8 +166,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
                               child: SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2.5),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2.5),
                               ),
                             )
                           : IconButton(
@@ -187,7 +190,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                       IconButton(
                         onPressed: AppUtils.returnIf(
                           data!.realUrl != null,
-                          () => launchUrlInWeb(
+                          () => launchExternalUrl(
                             context,
                             data.realUrl!,
                             ref.read(toastProvider),
@@ -252,7 +255,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
                           ),
                           if (data?.realUrl != null)
                             PopupMenuItem(
-                              onTap: () => launchUrlInWeb(
+                              onTap: () => launchExternalUrl(
                                 context,
                                 data!.realUrl!,
                                 ref.read(toastProvider),
@@ -326,6 +329,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
         wrapper: (body) => Scaffold(
           appBar: AppBar(
             title: Text(context.l10n.manga),
+            actions: [LocalCacheActions(mangaId: mangaId)],
           ),
           body: body,
         ),

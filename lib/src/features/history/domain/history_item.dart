@@ -9,6 +9,9 @@ import 'package:flutter/material.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 
+export '../../manga_book/domain/chapter/chapter_model.dart'
+    show ChapterExtension;
+
 // Use existing ChapterWithMangaDto as the base for history items
 // since it already contains all the data we need including lastReadAt
 typedef HistoryItemDto = ChapterWithMangaDto;

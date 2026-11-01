@@ -5,23 +5,19 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../utils/network/manga_cache_manager.dart';
-
 import '../constants/app_sizes.dart';
 import '../constants/endpoints.dart';
-import '../constants/enum.dart';
 import '../features/settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
-import '../features/settings/presentation/server/widget/credential_popup/credentials_popup.dart';
-import '../global_providers/global_providers.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/misc/app_utils.dart';
+import '../utils/network/auth_headers.dart';
+import '../utils/network/manga_cache_manager.dart';
 import 'custom_circular_progress_indicator.dart';
 
 class ServerImage extends HookConsumerWidget {
@@ -49,8 +45,7 @@ class ServerImage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final key = useState(UniqueKey());
     // Providers
-    final authType = ref.watch(authTypeKeyProvider);
-    final basicToken = ref.watch(credentialsProvider);
+    final httpHeaders = ref.watch(serverAuthHeadersProvider);
 
     final baseApi = "${Endpoints.baseApi(
       baseUrl: ref.watch(serverUrlProvider),
@@ -59,18 +54,6 @@ class ServerImage extends HookConsumerWidget {
       appendApiToUrl: appendApiToUrl,
     )}"
         "$imageUrl";
-
-    final Map<String, String>? httpHeaders =
-        (authType == AuthType.basic && basicToken != null)
-            ? ({"Authorization": basicToken})
-            : null;
-
-    final ImageRenderMethodForWeb renderMethod;
-    if (authType == AuthType.basic && basicToken != null) {
-      renderMethod = ImageRenderMethodForWeb.HttpGet;
-    } else {
-      renderMethod = ImageRenderMethodForWeb.HtmlImage;
-    }
 
     finalProgressIndicatorBuilder(
             BuildContext context, String url, DownloadProgress progress) =>
@@ -122,11 +105,10 @@ class ServerImage extends HookConsumerWidget {
       key: key.value,
       imageUrl: baseApi,
       height: size?.height,
-      cacheManager: MangaCacheManager(),
+      cacheManager: ref.watch(mangaCacheManagerProvider),
       httpHeaders: httpHeaders,
       width: size?.width,
       fit: fit ?? BoxFit.cover,
-      imageRenderMethodForWeb: renderMethod,
       progressIndicatorBuilder: finalProgressIndicatorBuilder,
       errorWidget: errorWidget,
     );
