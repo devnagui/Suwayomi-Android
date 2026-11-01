@@ -8,6 +8,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../chapter/chapter_model.dart';
 import 'graphql/__generated__/fragment.graphql.dart';
 
 part 'manga_model.freezed.dart';
@@ -18,6 +19,13 @@ typedef MangaDto = Fragment$MangaDto;
 typedef MangaBaseDto = Fragment$MangaBaseDto;
 
 extension MangaExtensions on MangaDto {
+  bool get inLibrary => user.inLibrary;
+  String get inLibraryAt => user.inLibraryAt;
+  int get unreadCount => user.unreadCount;
+  int get downloadCount => user.downloadCount;
+  ChapterDto? get lastReadChapter => user.lastReadChapter;
+  ChapterDto? get latestReadChapter => user.latestReadChapter;
+
   bool genreMatches(
       List<String>? mangaGenreList, List<String>? queryGenreList) {
     Set<String>? mangaSet = mangaGenreList?.map((e) => e.toLowerCase()).toSet();
@@ -34,6 +42,12 @@ extension MangaExtensions on MangaDto {
 
   MangaMeta get metaData => MangaMeta.fromJson(
       {for (final metaItem in meta) metaItem.key: metaItem.value});
+}
+
+extension MangaBaseExtensions on MangaBaseDto {
+  bool get inLibrary => user.inLibrary;
+  String get inLibraryAt => user.inLibraryAt;
+  int get unreadCount => user.unreadCount;
 }
 
 @freezed

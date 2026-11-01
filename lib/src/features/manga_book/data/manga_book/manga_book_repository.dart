@@ -73,11 +73,12 @@ class MangaBookRepository {
   Future<MangaDto?> getManga({
     required int mangaId,
   }) =>
-      client
-          .query$GetManga(Options$Query$GetManga(
-            variables: Variables$Query$GetManga(id: mangaId),
-          ))
-          .getData((data) => data.manga);
+      networkFirstQuery(
+        (policy) => client.query$GetManga(Options$Query$GetManga(
+          variables: Variables$Query$GetManga(id: mangaId),
+          fetchPolicy: policy,
+        )),
+      ).getData((data) => data.manga);
 
   Future<List<CategoryDto>?> getMangaCategoryList({
     required int mangaId,
@@ -142,7 +143,7 @@ class MangaBookRepository {
     } catch (_) {
       final cached = await cache.get(cacheKey);
       if (cached != null) {
-        return ChapterDto.fromJson(cached as Map<String, dynamic>);
+        return chapterFromJson(cached as Map<String, dynamic>);
       }
       rethrow;
     }
@@ -218,8 +219,10 @@ class MangaBookRepository {
         .mutate$GetChaptersByMangaId(
           Options$Mutation$GetChaptersByMangaId(
             variables: Variables$Mutation$GetChaptersByMangaId(
-              input: Input$FetchChaptersInput(
-                mangaId: mangaId,
+              input: Input$FetchMangaAndChaptersInput(
+                id: mangaId,
+                fetchManga: false,
+                fetchChapters: true,
               ),
             ),
           ),
@@ -256,7 +259,7 @@ class MangaBookRepository {
           final cached = await cache.get(cacheKey);
           if (cached != null) {
             return (cached as List)
-                .map((e) => ChapterDto.fromJson(e as Map<String, dynamic>))
+                .map((e) => chapterFromJson(e as Map<String, dynamic>))
                 .toList();
           }
           Error.throwWithStackTrace(error, stackTrace);
@@ -266,7 +269,7 @@ class MangaBookRepository {
       final cached = await cache.get(cacheKey);
       if (cached != null) {
         return (cached as List)
-            .map((e) => ChapterDto.fromJson(e as Map<String, dynamic>))
+            .map((e) => chapterFromJson(e as Map<String, dynamic>))
             .toList();
       }
       rethrow;
@@ -274,7 +277,7 @@ class MangaBookRepository {
       final cached = await cache.get(cacheKey);
       if (cached != null) {
         return (cached as List)
-            .map((e) => ChapterDto.fromJson(e as Map<String, dynamic>))
+            .map((e) => chapterFromJson(e as Map<String, dynamic>))
             .toList();
       }
       rethrow;
@@ -284,4 +287,4 @@ class MangaBookRepository {
 
 @riverpod
 MangaBookRepository mangaBookRepository(Ref ref) =>
-  MangaBookRepository(ref.watch(graphQlClientProvider), ref);
+    MangaBookRepository(ref.watch(graphQlClientProvider), ref);

@@ -17,25 +17,25 @@ mutation UpdateDownloadAsCbz($downloadAsCbz: Boolean = false) {
 }
 
 mutation UpdateAutoDownloadNewChaptersLimit($autoDownloadNewChaptersLimit: Int = 3) {
-  setSettings(input: {settings: {autoDownloadNewChaptersLimit: $autoDownloadNewChaptersLimit}}) {
-    settings {
-      ...SettingsDto
+  setUserSettings(input: {userSettings: {autoDownloadNewChaptersLimit: $autoDownloadNewChaptersLimit}}) {
+    userSettings {
+      ...UserSettingsDto
     }
   }
 }
 
 mutation ToggleExcludeEntryWithUnreadChapters($excludeEntryWithUnreadChapters: Boolean = false) {
-  setSettings(input: {settings: {excludeEntryWithUnreadChapters: $excludeEntryWithUnreadChapters}}) {
-    settings {
-      ...SettingsDto
+  setUserSettings(input: {userSettings: {excludeEntryWithUnreadChapters: $excludeEntryWithUnreadChapters}}) {
+    userSettings {
+      ...UserSettingsDto
     }
   }
 }
 
 mutation ToggleAutoDownloadNewChapters($autoDownloadNewChapters: Boolean = false) {
-  setSettings(input: {settings: {autoDownloadNewChapters: $autoDownloadNewChapters}}) {
-    settings {
-      ...SettingsDto
+  setUserSettings(input: {userSettings: {autoDownloadNewChapters: $autoDownloadNewChapters}}) {
+    userSettings {
+      ...UserSettingsDto
     }
   }
 }

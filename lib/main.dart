@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -29,7 +28,6 @@ Future<void> main() async {
   }
 
   SystemChrome.setPreferredOrientations(DeviceOrientation.values);
-  GoRouter.optionURLReflectsImperativeAPIs = true;
   runApp(
     ProviderScope(
       overrides: [

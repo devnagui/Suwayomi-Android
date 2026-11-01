@@ -37,6 +37,8 @@ class SettingsPropPopUp<T> extends ConsumerWidget {
       );
       if (result != null && result is SettingsDto) {
         ref.read(settingsProvider.notifier).updateState(result);
+      } else if (result is UserSettingsDto) {
+        ref.read(userSettingsProvider.notifier).updateState(result);
       }
     }
 

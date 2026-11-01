@@ -12,7 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../utils/launch_url_in_web.dart';
+import '../../../../../utils/launch_external_url.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/async_buttons/async_text_button_icon.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
@@ -72,7 +72,7 @@ class MangaDescription extends HookConsumerWidget {
               if (manga.realUrl.isNotBlank)
                 TextButton.icon(
                   onPressed: () async {
-                    launchUrlInWeb(
+                    launchExternalUrl(
                       context,
                       (manga.realUrl ?? ""),
                       ref.read(toastProvider),

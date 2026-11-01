@@ -11,7 +11,33 @@ typedef ChapterDto = Fragment$ChapterDto;
 
 typedef ChapterWithMangaDto = Fragment$ChapterWithMangaDto;
 
+ChapterDto chapterFromJson(Map<String, dynamic> json) {
+  if (!json.containsKey('user')) {
+    json = {
+      ...json,
+      'user': {
+        for (final key in [
+          'isBookmarked',
+          'isDownloaded',
+          'isRead',
+          'lastPageRead',
+          'lastReadAt',
+        ])
+          key: json[key],
+        '__typename': 'ChapterUserType',
+      },
+    };
+  }
+  return ChapterDto.fromJson(json);
+}
+
 extension ChapterExtension on Fragment$ChapterDto {
+  bool get isBookmarked => user.isBookmarked;
+  bool get isDownloaded => user.isDownloaded;
+  bool get isRead => user.isRead;
+  int get lastPageRead => user.lastPageRead;
+  String get lastReadAt => user.lastReadAt;
+
   bool query([String? query]) {
     return name.query(query) || index == int.tryParse(query ?? '');
   }

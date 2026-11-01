@@ -17,6 +17,7 @@ class DownloadsSettingsScreen extends ConsumerWidget {
   Widget build(context, ref) {
     final repository = ref.watch(downloadsSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
+    final userSettings = ref.watch(userSettingsProvider);
     return ListTileTheme(
       data: const ListTileThemeData(
         subtitleTextStyle: TextStyle(color: Colors.grey),
@@ -24,69 +25,77 @@ class DownloadsSettingsScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(title: Text(context.l10n.downloads)),
         body: RefreshIndicator(
-          onRefresh: () => ref.refresh(settingsProvider.future),
-          child: serverSettings.showUiWhenData(
+          onRefresh: () async {
+            await Future.wait([
+              ref.refresh(settingsProvider.future),
+              ref.refresh(userSettingsProvider.future),
+            ]);
+          },
+          child: userSettings.showUiWhenData(
             context,
-            (data) {
-              final DownloadsSettingsDto? downloadsSettingsDto = data;
-              if (downloadsSettingsDto == null) {
-                return Emoticons(
-                  title: context.l10n.noPropFound(context.l10n.settings),
+            (userSettingsDto) => serverSettings.showUiWhenData(
+              context,
+              (data) {
+                final DownloadsSettingsDto? downloadsSettingsDto = data;
+                if (downloadsSettingsDto == null || userSettingsDto == null) {
+                  return Emoticons(
+                    title: context.l10n.noPropFound(context.l10n.settings),
+                  );
+                }
+                return ListView(
+                  children: [
+                    SectionTitle(title: context.l10n.general),
+                    SettingsPropTile(
+                      title: context.l10n.downloadLocation,
+                      description: context.l10n.downloadLocationHint,
+                      type: SettingsPropType.textField(
+                        hintText: context.l10n
+                            .enterProp(context.l10n.downloadLocation),
+                        value: downloadsSettingsDto.downloadsPath,
+                        onChanged: repository.updateDownloadsLocation,
+                      ),
+                      subtitle: downloadsSettingsDto.downloadsPath,
+                    ),
+                    SettingsPropTile(
+                      title: context.l10n.saveAsCBZArchive,
+                      type: SettingsPropType.switchTile(
+                        value: downloadsSettingsDto.downloadAsCbz,
+                        onChanged: repository.updateDownloadAsCbz,
+                      ),
+                    ),
+                    SectionTitle(title: context.l10n.autoDownload),
+                    SettingsPropTile(
+                      title: context.l10n.autoDownloadNewChapters,
+                      type: SettingsPropType.switchTile(
+                        value: userSettingsDto.autoDownloadNewChapters,
+                        onChanged: repository.toggleAutoDownloadNewChapters,
+                      ),
+                    ),
+                    SettingsPropTile(
+                      title: context.l10n.chapterDownloadLimit,
+                      description: context.l10n.chapterDownloadLimitDesc,
+                      type: SettingsPropType.numberSlider(
+                        value: userSettingsDto.autoDownloadNewChaptersLimit,
+                        min: 0,
+                        max: 20,
+                        onChanged:
+                            repository.updateAutoDownloadNewChaptersLimit,
+                      ),
+                      subtitle: context.l10n.nChapters(
+                          userSettingsDto.autoDownloadNewChaptersLimit),
+                    ),
+                    SettingsPropTile(
+                      title: context.l10n.excludeEntryWithUnreadChapters,
+                      type: SettingsPropType.switchTile(
+                        value: userSettingsDto.excludeEntryWithUnreadChapters,
+                        onChanged:
+                            repository.toggleExcludeEntryWithUnreadChapters,
+                      ),
+                    ),
+                  ],
                 );
-              }
-              return ListView(
-                children: [
-                  SectionTitle(title: context.l10n.general),
-                  SettingsPropTile(
-                    title: context.l10n.downloadLocation,
-                    description: context.l10n.downloadLocationHint,
-                    type: SettingsPropType.textField(
-                      hintText:
-                          context.l10n.enterProp(context.l10n.downloadLocation),
-                      value: downloadsSettingsDto.downloadsPath,
-                      onChanged: repository.updateDownloadsLocation,
-                    ),
-                    subtitle: downloadsSettingsDto.downloadsPath,
-                  ),
-                  SettingsPropTile(
-                    title: context.l10n.saveAsCBZArchive,
-                    type: SettingsPropType.switchTile(
-                      value: downloadsSettingsDto.downloadAsCbz,
-                      onChanged: repository.updateDownloadAsCbz,
-                    ),
-                  ),
-                  SectionTitle(title: context.l10n.autoDownload),
-                  SettingsPropTile(
-                    title: context.l10n.autoDownloadNewChapters,
-                    type: SettingsPropType.switchTile(
-                      value: downloadsSettingsDto.autoDownloadNewChapters,
-                      onChanged: repository.toggleAutoDownloadNewChapters,
-                    ),
-                  ),
-                  SettingsPropTile(
-                    title: context.l10n.chapterDownloadLimit,
-                    description: context.l10n.chapterDownloadLimitDesc,
-                    type: SettingsPropType.numberSlider(
-                      value: downloadsSettingsDto.autoDownloadNewChaptersLimit,
-                      min: 0,
-                      max: 20,
-                      onChanged: repository.updateAutoDownloadNewChaptersLimit,
-                    ),
-                    subtitle: context.l10n.nChapters(
-                        downloadsSettingsDto.autoDownloadNewChaptersLimit),
-                  ),
-                  SettingsPropTile(
-                    title: context.l10n.excludeEntryWithUnreadChapters,
-                    type: SettingsPropType.switchTile(
-                      value:
-                          downloadsSettingsDto.excludeEntryWithUnreadChapters,
-                      onChanged:
-                          repository.toggleExcludeEntryWithUnreadChapters,
-                    ),
-                  ),
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
       ),

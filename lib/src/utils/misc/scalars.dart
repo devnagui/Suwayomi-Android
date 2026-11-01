@@ -26,10 +26,10 @@ String longStringFromJson(dynamic data) {
   return data.toString();
 }
 
-dynamic cursorToJson(int data) {
+dynamic cursorToJson(String data) {
   return data;
 }
 
-int cursorFromJson(dynamic data) {
-  return int.tryParse(data) ?? 0;
+String cursorFromJson(dynamic data) {
+  return data as String;
 }

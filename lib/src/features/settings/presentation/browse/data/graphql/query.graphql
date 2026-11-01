@@ -16,10 +16,16 @@ mutation UpdateLocalSourcePath($localSourcePath: String!) {
   }
 }
 
-mutation UpdateExtensionRepos($extensionRepos: [String!]!) {
-  setSettings(input: {settings: {extensionRepos: $extensionRepos}}) {
-    settings {
-      ...SettingsDto
+mutation AddExtensionStore($indexUrl: String!) {
+  addExtensionStore(input: {indexUrl: $indexUrl}) {
+    extensionStore {
+      indexUrl
     }
+  }
+}
+
+mutation RemoveExtensionStore($indexUrl: String!) {
+  removeExtensionStore(input: {indexUrl: $indexUrl}) {
+    __typename
   }
 }

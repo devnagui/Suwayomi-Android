@@ -27,6 +27,7 @@ class LibrarySettingsScreen extends ConsumerWidget {
   Widget build(context, ref) {
     final repository = ref.watch(librarySettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
+    final userSettings = ref.watch(userSettingsProvider);
 
     return ListTileTheme(
       data: const ListTileThemeData(
@@ -37,102 +38,113 @@ class LibrarySettingsScreen extends ConsumerWidget {
           title: Text(context.l10n.library),
         ),
         body: RefreshIndicator(
-          onRefresh: () => ref.refresh(settingsProvider.future),
-          child: serverSettings.showUiWhenData(
+          onRefresh: () async {
+            await Future.wait([
+              ref.refresh(settingsProvider.future),
+              ref.refresh(userSettingsProvider.future),
+            ]);
+          },
+          child: userSettings.showUiWhenData(
             context,
-            (data) {
-              final LibrarySettingsDto? librarySettingsDto = data;
-              if (librarySettingsDto == null) {
-                return Emoticons(
-                  title: context.l10n.noPropFound(context.l10n.settings),
-                );
-              }
-              final skipUpdatingEntriesList = [
-                if (librarySettingsDto.excludeCompleted)
-                  context.l10n.withCompletedStatus,
-                if (librarySettingsDto.excludeNotStarted)
-                  context.l10n.thatHaventBeenStarted,
-                if (librarySettingsDto.excludeUnreadChapters)
-                  context.l10n.withUnreadChapter,
-              ];
-              void onAutomaticUpdateIntervalUpdate(int value) async {
-                final result = await AppUtils.guard(
-                    () =>
-                        repository.updateGlobalUpdateInterval(value.toDouble()),
-                    ref.read(toastProvider));
-                if (result != null) {
-                  ref.read(settingsProvider.notifier).updateState(result);
+            (userSettingsDto) => serverSettings.showUiWhenData(
+              context,
+              (data) {
+                final LibrarySettingsDto? librarySettingsDto = data;
+                if (librarySettingsDto == null || userSettingsDto == null) {
+                  return Emoticons(
+                    title: context.l10n.noPropFound(context.l10n.settings),
+                  );
                 }
-              }
-
-              return ListView(
-                children: [
-                  SectionTitle(title: context.l10n.general),
-                  ListTile(
-                    title: Text(context.l10n.categories),
-                    leading: const Icon(Icons.label_rounded),
-                    onTap: () => const EditCategoriesRoute().go(context),
-                  ),
-                  // HideEmptyCategoryTile(),
-                  SectionTitle(title: context.l10n.globalUpdate),
-                  SettingsPropTile(
-                    leading: const Icon(Icons.autorenew_rounded),
-                    title: context.l10n.automaticUpdate,
-                    subtitle: librarySettingsDto.globalUpdateInterval.isNotZero
-                        ? context.l10n.nHours(
-                            librarySettingsDto.globalUpdateInterval.toInt())
-                        : null,
-                    trailing: Switch(
-                      value: librarySettingsDto.globalUpdateInterval.isNotZero,
-                      onChanged: (value) =>
-                          onAutomaticUpdateIntervalUpdate(value ? 12 : 0),
-                    ),
-                    onTap: AppUtils.returnIf(
-                      librarySettingsDto.globalUpdateInterval.isZero,
-                      () => onAutomaticUpdateIntervalUpdate(12),
-                    ),
-                    type: SettingsPropType.numberPicker(
-                      min: 1,
-                      max: 10000000,
-                      value: librarySettingsDto.globalUpdateInterval.toInt(),
-                      onChanged: (value) => repository
+                final skipUpdatingEntriesList = [
+                  if (userSettingsDto.excludeCompleted)
+                    context.l10n.withCompletedStatus,
+                  if (userSettingsDto.excludeNotStarted)
+                    context.l10n.thatHaventBeenStarted,
+                  if (userSettingsDto.excludeUnreadChapters)
+                    context.l10n.withUnreadChapter,
+                ];
+                void onAutomaticUpdateIntervalUpdate(int value) async {
+                  final result = await AppUtils.guard(
+                      () => repository
                           .updateGlobalUpdateInterval(value.toDouble()),
+                      ref.read(toastProvider));
+                  if (result != null) {
+                    ref.read(settingsProvider.notifier).updateState(result);
+                  }
+                }
+
+                return ListView(
+                  children: [
+                    SectionTitle(title: context.l10n.general),
+                    ListTile(
+                      title: Text(context.l10n.categories),
+                      leading: const Icon(Icons.label_rounded),
+                      onTap: () => const EditCategoriesRoute().go(context),
                     ),
-                  ),
-                  SettingsPropTile(
-                    title: context.l10n.automaticallyRefreshMetadata,
-                    trailing: const Icon(Icons.now_wallpaper_rounded),
-                    subtitle: context.l10n.automaticallyRefreshMetadataSubtitle,
-                    type: SettingsPropType.switchTile(
-                      value: librarySettingsDto.updateMangas,
-                      onChanged: (value) async {
-                        final result = await AppUtils.guard(
-                            () => repository.updateMangaMetaData(value),
-                            ref.read(toastProvider));
-                        if (result != null) {
-                          ref
-                              .read(settingsProvider.notifier)
-                              .updateState(result);
-                        }
-                      },
+                    // HideEmptyCategoryTile(),
+                    SectionTitle(title: context.l10n.globalUpdate),
+                    SettingsPropTile(
+                      leading: const Icon(Icons.autorenew_rounded),
+                      title: context.l10n.automaticUpdate,
+                      subtitle: librarySettingsDto
+                              .globalUpdateInterval.isNotZero
+                          ? context.l10n.nHours(
+                              librarySettingsDto.globalUpdateInterval.toInt())
+                          : null,
+                      trailing: Switch(
+                        value:
+                            librarySettingsDto.globalUpdateInterval.isNotZero,
+                        onChanged: (value) =>
+                            onAutomaticUpdateIntervalUpdate(value ? 12 : 0),
+                      ),
+                      onTap: AppUtils.returnIf(
+                        librarySettingsDto.globalUpdateInterval.isZero,
+                        () => onAutomaticUpdateIntervalUpdate(12),
+                      ),
+                      type: SettingsPropType.numberPicker(
+                        min: 1,
+                        max: 10000000,
+                        value: librarySettingsDto.globalUpdateInterval.toInt(),
+                        onChanged: (value) => repository
+                            .updateGlobalUpdateInterval(value.toDouble()),
+                      ),
                     ),
-                  ),
-                  ListTile(
-                    title: Text(context.l10n.skipUpdatingEntries),
-                    subtitle: Text(
-                      skipUpdatingEntriesList.isNotBlank
-                          ? skipUpdatingEntriesList.join(", ")
-                          : context.l10n.none,
+                    SettingsPropTile(
+                      title: context.l10n.automaticallyRefreshMetadata,
+                      trailing: const Icon(Icons.now_wallpaper_rounded),
+                      subtitle:
+                          context.l10n.automaticallyRefreshMetadataSubtitle,
+                      type: SettingsPropType.switchTile(
+                        value: userSettingsDto.updateMangas,
+                        onChanged: (value) async {
+                          final result = await AppUtils.guard(
+                              () => repository.updateMangaMetaData(value),
+                              ref.read(toastProvider));
+                          if (result != null) {
+                            ref
+                                .read(userSettingsProvider.notifier)
+                                .updateState(result);
+                          }
+                        },
+                      ),
                     ),
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (context) => const SkipUpdatingEntriesPopup(),
+                    ListTile(
+                      title: Text(context.l10n.skipUpdatingEntries),
+                      subtitle: Text(
+                        skipUpdatingEntriesList.isNotBlank
+                            ? skipUpdatingEntriesList.join(", ")
+                            : context.l10n.none,
+                      ),
+                      onTap: () => showDialog(
+                        context: context,
+                        builder: (context) => const SkipUpdatingEntriesPopup(),
+                      ),
                     ),
-                  ),
-                  // SectionTitle(title: context.l10n.advanced),
-                ],
-              );
-            },
+                    // SectionTitle(title: context.l10n.advanced),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),

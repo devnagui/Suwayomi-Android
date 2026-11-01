@@ -3,7 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/urls.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../../utils/launch_url_in_web.dart';
+import '../../../../../../utils/launch_external_url.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../widgets/input_popup/domain/settings_prop_type.dart';
@@ -29,7 +29,7 @@ class CloudFlareSection extends ConsumerWidget {
             Text(context.l10n.flareSolverr),
             IconButton(
                 iconSize: 18,
-                onPressed: () => launchUrlInWeb(
+                onPressed: () => launchExternalUrl(
                     context, AppUrls.flareSolverr.url, ref.read(toastProvider)),
                 icon: const Icon(Icons.open_in_new_rounded))
           ]),

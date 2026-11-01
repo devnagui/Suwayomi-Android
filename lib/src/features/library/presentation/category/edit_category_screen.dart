@@ -41,7 +41,8 @@ class EditCategoryScreen extends HookConsumerWidget {
         context,
         (data) {
           if (data.isBlank ||
-              (data.isSingletonList && data?.firstOrNull?.id == 0)) {
+              (data.isSingletonList &&
+                  data?.firstOrNull?.isDefaultCategory == true)) {
             return Emoticons(
               title: context.l10n.noCategoriesFound,
               button: TextButton(

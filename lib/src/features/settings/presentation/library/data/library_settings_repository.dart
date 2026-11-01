@@ -24,16 +24,16 @@ class LibrarySettingsRepository {
       )
       .getData((data) => data.setSettings.settings);
 
-  Future<SettingsDto?> updateMangaMetaData(bool value) => ferryClient
+  Future<UserSettingsDto?> updateMangaMetaData(bool value) => ferryClient
       .mutate$UpdateMangaMetaData(
         Options$Mutation$UpdateMangaMetaData(
           variables:
               Variables$Mutation$UpdateMangaMetaData(updateMangas: value),
         ),
       )
-      .getData((data) => data.setSettings.settings);
+      .getData((data) => data.setUserSettings.userSettings);
 
-  Future<SettingsDto?> toggleExcludeCompleted(bool value) => ferryClient
+  Future<UserSettingsDto?> toggleExcludeCompleted(bool value) => ferryClient
       .mutate$ToggleExcludeCompleted(
         Options$Mutation$ToggleExcludeCompleted(
           variables: Variables$Mutation$ToggleExcludeCompleted(
@@ -41,9 +41,9 @@ class LibrarySettingsRepository {
           ),
         ),
       )
-      .getData((data) => data.setSettings.settings);
+      .getData((data) => data.setUserSettings.userSettings);
 
-  Future<SettingsDto?> toggleExcludeNotStarted(bool value) => ferryClient
+  Future<UserSettingsDto?> toggleExcludeNotStarted(bool value) => ferryClient
       .mutate$ToggleExcludeNotStarted(
         Options$Mutation$ToggleExcludeNotStarted(
           variables: Variables$Mutation$ToggleExcludeNotStarted(
@@ -51,16 +51,17 @@ class LibrarySettingsRepository {
           ),
         ),
       )
-      .getData((data) => data.setSettings.settings);
+      .getData((data) => data.setUserSettings.userSettings);
 
-  Future<SettingsDto?> toggleExcludeUnreadChapters(bool value) => ferryClient
-      .mutate$ToggleExcludeUnreadChapters(
-        Options$Mutation$ToggleExcludeUnreadChapters(
-          variables: Variables$Mutation$ToggleExcludeUnreadChapters(
-              excludeUnreadChapters: value),
-        ),
-      )
-      .getData((data) => data.setSettings.settings);
+  Future<UserSettingsDto?> toggleExcludeUnreadChapters(bool value) =>
+      ferryClient
+          .mutate$ToggleExcludeUnreadChapters(
+            Options$Mutation$ToggleExcludeUnreadChapters(
+              variables: Variables$Mutation$ToggleExcludeUnreadChapters(
+                  excludeUnreadChapters: value),
+            ),
+          )
+          .getData((data) => data.setUserSettings.userSettings);
 }
 
 @riverpod

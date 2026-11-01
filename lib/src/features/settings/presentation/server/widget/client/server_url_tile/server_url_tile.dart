@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -23,7 +22,7 @@ class ServerUrl extends _$ServerUrl with SharedPreferenceClientMixin<String> {
   @override
   String? build() => initialize(
         DBKeys.serverUrl,
-        initial: kIsWeb ? Uri.base.origin : DBKeys.serverUrl.initial,
+        initial: DBKeys.serverUrl.initial,
       );
 }
 
@@ -37,7 +36,7 @@ class ServerUrlTile extends ConsumerWidget {
       title: context.l10n.serverUrl,
       subtitle: serverUrl,
       leading: const Icon(Icons.computer_rounded),
-      trailing: !kIsWeb ? const ServerSearchButton() : null,
+      trailing: const ServerSearchButton(),
       type: SettingsPropType<void>.textField(
         hintText: context.l10n.serverUrlHintText,
         value: serverUrl,

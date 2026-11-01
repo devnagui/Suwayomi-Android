@@ -9,7 +9,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../../../constants/urls.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../utils/launch_url_in_web.dart';
+import '../../../../../utils/launch_external_url.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 
 void appUpdateDialog({
@@ -32,7 +32,7 @@ void appUpdateDialog({
             ),
             ElevatedButton.icon(
               onPressed: () {
-                launchUrlInWeb(context,
+                launchExternalUrl(context,
                     url ?? AppUrls.sorayomiLatestReleaseUrl.url, toast);
                 Navigator.pop(context);
               },

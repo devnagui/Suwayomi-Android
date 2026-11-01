@@ -20,6 +20,8 @@ typedef SourceDto = Fragment$SourceDto;
 typedef SourceType = Enum$FetchSourceMangaType;
 
 extension SourceExtensions on SourceDto {
+  bool get isNsfw => contentWarning != Enum$ContentWarning.SAFE;
+
   Language? get language => LanguageJsonConverter.fromJson(lang);
 }
 

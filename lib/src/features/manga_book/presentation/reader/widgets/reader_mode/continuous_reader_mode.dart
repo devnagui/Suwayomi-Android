@@ -7,7 +7,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
@@ -183,9 +182,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
         isNext: true,
       ),
       child: AppUtils.wrapOn(
-        !kIsWeb &&
-                (Platform.isAndroid || Platform.isIOS) &&
-                isPinchToZoomEnabled
+        isPinchToZoomEnabled
             ? (Widget child) => InteractiveViewer(maxScale: 5, child: child)
             : null,
         ScrollablePositionedList.separated(

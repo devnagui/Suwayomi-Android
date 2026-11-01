@@ -24,9 +24,11 @@ class CategoryRepository {
 
   CategoryRepository(this.ferryClient);
 
-  Future<List<CategoryDto>?> getCategoryList() => ferryClient
-      .query$AllCategories()
-      .getData((data) => data.categories.nodes);
+  Future<List<CategoryDto>?> getCategoryList() => networkFirstQuery(
+        (policy) => ferryClient.query$AllCategories(
+          Options$Query$AllCategories(fetchPolicy: policy),
+        ),
+      ).getData((data) => data.categories.nodes);
 
   Future<void> createCategory({required CategoryCreate category}) =>
       ferryClient.mutate$CreateCategory(
@@ -80,13 +82,14 @@ class CategoryRepository {
   Future<List<MangaDto>?> getMangasFromCategory({
     required int categoryId,
   }) =>
-      ferryClient
-          .query$GetCategoryMangas(
-            Options$Query$GetCategoryMangas(
-              variables: Variables$Query$GetCategoryMangas(id: categoryId),
-            ),
-          )
-          .getData((data) => data.category.mangas.nodes);
+      networkFirstQuery(
+        (policy) => ferryClient.query$GetCategoryMangas(
+          Options$Query$GetCategoryMangas(
+            variables: Variables$Query$GetCategoryMangas(id: categoryId),
+            fetchPolicy: policy,
+          ),
+        ),
+      ).getData((data) => data.category.mangas.nodes);
 }
 
 @riverpod

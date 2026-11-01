@@ -16,6 +16,7 @@ import '../../browse_center/domain/source/source_model.dart';
 import '../../manga_book/data/manga_book/__generated__/query.graphql.dart';
 import '../../manga_book/domain/chapter/chapter_model.dart';
 import '../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
+import '../../manga_book/domain/manga/manga_model.dart';
 import '../domain/migration_models.dart';
 
 part 'migration_repository.g.dart';
@@ -220,7 +221,11 @@ class MigrationRepositoryImpl implements MigrationRepository {
           final sourceChaptersResult = await client.mutate$GetChaptersByMangaId(
             Options$Mutation$GetChaptersByMangaId(
               variables: Variables$Mutation$GetChaptersByMangaId(
-                input: Input$FetchChaptersInput(mangaId: fromMangaId),
+                input: Input$FetchMangaAndChaptersInput(
+                  id: fromMangaId,
+                  fetchManga: false,
+                  fetchChapters: true,
+                ),
               ),
             ),
           );
@@ -229,7 +234,11 @@ class MigrationRepositoryImpl implements MigrationRepository {
           final targetChaptersResult = await client.mutate$GetChaptersByMangaId(
             Options$Mutation$GetChaptersByMangaId(
               variables: Variables$Mutation$GetChaptersByMangaId(
-                input: Input$FetchChaptersInput(mangaId: toMangaId),
+                input: Input$FetchMangaAndChaptersInput(
+                  id: toMangaId,
+                  fetchManga: false,
+                  fetchChapters: true,
+                ),
               ),
             ),
           );

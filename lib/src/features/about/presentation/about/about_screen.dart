@@ -12,10 +12,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pub_semver/pub_semver.dart';
 
 import '../../../../constants/app_sizes.dart';
-import '../../../../constants/gen/assets.gen.dart';
+import '../../../../constants/assets.dart';
 import '../../../../constants/urls.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/launch_url_in_web.dart';
+import '../../../../utils/launch_external_url.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../data/about_repository.dart';
 import '../../domain/about/about_dto.dart';
@@ -134,7 +134,7 @@ class AboutScreen extends HookConsumerWidget {
         child: ListView(
           children: [
             ImageIcon(
-              AssetImage(Assets.icons.darkIcon.path),
+              AssetImage(AppAssets.darkIcon),
               size: context.height * .2,
             ),
             const Divider(),
@@ -150,7 +150,7 @@ class AboutScreen extends HookConsumerWidget {
               title: Text(context.l10n.whatsNew),
               onTap: () async {
                 final url = AppUrls.sorayomiWhatsNew.url + packageInfo.version;
-                await launchUrlInWeb(context, url, toast);
+                await launchExternalUrl(context, url, toast);
               },
             ),
             ListTile(

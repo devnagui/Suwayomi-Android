@@ -14,9 +14,9 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
 
   @override
   Widget build(context, ref) {
-    final settingsDto = ref.watch(settingsProvider);
+    final settingsDto = ref.watch(userSettingsProvider);
     final repository = ref.watch(librarySettingsRepositoryProvider);
-    final LibrarySettingsDto? librarySettingsDto = settingsDto.valueOrNull;
+    final UserSettingsDto? librarySettingsDto = settingsDto.valueOrNull;
     return AlertDialog(
       title: Text(context.l10n.skipUpdatingEntries),
       contentPadding: KEdgeInsets.v8.size,
@@ -35,7 +35,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
                   ref.read(toastProvider),
                 );
                 if (result != null) {
-                  ref.read(settingsProvider.notifier).updateState(result);
+                  ref.read(userSettingsProvider.notifier).updateState(result);
                 }
               },
             ),
@@ -50,7 +50,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
                   ref.read(toastProvider),
                 );
                 if (result != null) {
-                  ref.read(settingsProvider.notifier).updateState(result);
+                  ref.read(userSettingsProvider.notifier).updateState(result);
                 }
               },
             ),
@@ -65,7 +65,7 @@ class SkipUpdatingEntriesPopup extends ConsumerWidget {
                   ref.read(toastProvider),
                 );
                 if (result != null) {
-                  ref.read(settingsProvider.notifier).updateState(result);
+                  ref.read(userSettingsProvider.notifier).updateState(result);
                 }
               },
             ),

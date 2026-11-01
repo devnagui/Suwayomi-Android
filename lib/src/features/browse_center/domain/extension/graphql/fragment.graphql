@@ -4,12 +4,12 @@ fragment ExtensionDto on ExtensionType {
   hasUpdate
   iconUrl
   isInstalled
-  isNsfw
+  contentWarning
   isObsolete
   lang
   name
   pkgName
-  repo
-  versionCode
+  storeIndexUrl
+  versionCodeLong
   versionName
 }

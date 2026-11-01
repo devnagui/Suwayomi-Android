@@ -5,9 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'dart:async';
-import 'dart:io';
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_android_volume_keydown/flutter_android_volume_keydown.dart';
@@ -23,7 +20,7 @@ import '../../../../../constants/enum.dart';
 import '../../../../../constants/reader_keyboard_shortcuts.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
-import '../../../../../utils/launch_url_in_web.dart';
+import '../../../../../utils/launch_external_url.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../settings/presentation/reader/widgets/reader_initial_overlay_tile/reader_initial_overlay_tile.dart';
@@ -137,8 +134,7 @@ class ReaderWrapper extends HookConsumerWidget {
 
     // On Android phones, disable swipe gestures that navigate to the
     // next/previous chapter to avoid accidental chapter changes.
-    final bool disableSwipeChapterNavigation =
-        !kIsWeb && Platform.isAndroid && !context.isTablet;
+    final bool disableSwipeChapterNavigation = !context.isTablet;
 
     final bool readerSwipeChapterToggle = disableSwipeChapterNavigation
         ? false
@@ -365,7 +361,7 @@ class ReaderWrapper extends HookConsumerWidget {
                       ? const SizedBox.shrink()
                       : IconButton(
                           onPressed: () async {
-                            launchUrlInWeb(
+                            launchExternalUrl(
                               context,
                               (chapter.realUrl ?? ""),
                               ref.read(toastProvider),

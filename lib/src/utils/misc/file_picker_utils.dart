@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 
@@ -18,10 +17,7 @@ abstract class FilePickerUtils {
     );
     final file = pickedFiles?.files.first;
     if (context != null && context.mounted) {
-      if (file == null ||
-          file.name.isBlank ||
-          (kIsWeb && (file.bytes).isBlank ||
-              (!kIsWeb && (file.path).isBlank))) {
+      if (file == null || file.name.isBlank || file.path.isBlank) {
         throw context.l10n.errorFilePick;
       }
       if (extensions.isNotBlank &&
@@ -39,18 +35,14 @@ abstract class FilePickerUtils {
     final String newFileNameWithExtension = file.extension.isNotBlank
         ? "$newFileName.${file.extension}"
         : newFileName;
-    if (kIsWeb) {
-      return MultipartFile.fromBytes(
-        newFileName,
-        file.bytes!,
-        filename: newFileNameWithExtension,
-      );
-    } else {
-      return MultipartFile.fromPath(
-        newFileName,
-        file.path!,
-        filename: newFileNameWithExtension,
-      );
+    final path = file.path;
+    if (path == null || path.isEmpty) {
+      throw ArgumentError('Selected file has no Android file path');
     }
+    return MultipartFile.fromPath(
+      newFileName,
+      path,
+      filename: newFileNameWithExtension,
+    );
   }
 }

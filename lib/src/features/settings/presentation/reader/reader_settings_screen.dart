@@ -4,9 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -46,17 +43,11 @@ class ReaderSettingsScreen extends ConsumerWidget {
           const ReaderScrollAnimationTile(),
           const ReaderPaddingSlider(),
           const ReaderMagnifierSizeSlider(),
-          if (!kIsWeb) ...[
-            if (Platform.isAndroid || Platform.isIOS) ...[
-              const ReaderPinchToZoom(),
-              const ReaderSmartDownloadTile(),
-              const ReaderIgnoreSafeAreaTile(),
-            ],
-            if (Platform.isAndroid) ...[
-              const ReaderVolumeTapTile(),
-              if (isVolumeTapEnabled) const ReaderVolumeTapInvertTile(),
-            ],
-          ],
+          const ReaderPinchToZoom(),
+          const ReaderSmartDownloadTile(),
+          const ReaderIgnoreSafeAreaTile(),
+          const ReaderVolumeTapTile(),
+          if (isVolumeTapEnabled) const ReaderVolumeTapInvertTile(),
           const Gap(128),
         ],
       ),

@@ -2,33 +2,41 @@
  <img width=200px height=200px src="assets/icons/launcher/sorayomi_icon.png" alt="Sorayomi logo"/>
 </p>
 
-<h1 align="center"> Sorayomi </h1>
+<h1 align="center"> Suwayomi-Android </h1>
 
 <div align="center">
 
-[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Linux%20%7C%20Windows%20%7C%20MacOS%20%7C%20Web-lightgrey)][release]
+[![Platform](https://img.shields.io/badge/platform-Android-lightgrey)][release]
 [![Discord](https://img.shields.io/discord/801021177333940224.svg?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/DDZdqZWaHA)
 
 </div>
 
 <div align="center">
 
-[![GitHub Stars](https://img.shields.io/github/stars/Suwayomi/Tachidesk-Sorayomi)](https://github.com/Suwayomi/Tachidesk-Sorayomi)
-[![GitHub License](https://img.shields.io/github/license/Suwayomi/Tachidesk-Sorayomi)](https://github.com/Suwayomi/Tachidesk-Sorayomi/blob/main/LICENSE)
-![CI](https://github.com/Suwayomi/Tachidesk-Sorayomi/actions/workflows/publish.yml/badge.svg)
-[![stable release](https://img.shields.io/github/release/Suwayomi/Tachidesk-Sorayomi.svg?maxAge=3600&label=download)](https://github.com/Suwayomi/Tachidesk-Sorayomi/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/devnagui/Suwayomi-Android)](https://github.com/devnagui/Suwayomi-Android)
+[![GitHub License](https://img.shields.io/github/license/devnagui/Suwayomi-Android)](https://github.com/devnagui/Suwayomi-Android/blob/main/LICENSE)
+![CI](https://github.com/devnagui/Suwayomi-Android/actions/workflows/publish.yml/badge.svg)
 
 </div>
 
 
 
 <p align="center">
-A free and open source manga reader based on <a href="https://flutter.dev/">Flutter</a> to read manga from a <a href="https://github.com/Suwayomi/Tachidesk-Server">Suwayomi-Server</a> instance.</br></br>
-Sorayomi need to connect with an already hosted server.</br></br>
-Sorayomi supports Linux, Windows, MacOS, Web, iOS and Android.
+An Android-only thin client fork of <a href="https://github.com/Suwayomi/Tachidesk-Sorayomi">Sorayomi</a>, built with <a href="https://flutter.dev/">Flutter</a> to read manga from a <a href="https://github.com/Suwayomi/Suwayomi-Server">Suwayomi-Server</a> instance.</br></br>
+Suwayomi-Android needs to connect to an already hosted server.</br></br>
+This fork targets Android. The existing Android application ID and Sorayomi app branding are unchanged.
 </p>
 
 ---
+
+Only Android application code and APK packaging are maintained. Unsupported
+platform targets and their release jobs have been removed. Phone, foldable and
+tablet layouts, source browsing, library, history, downloads, recovery tools and
+current remote server-management features remain available. Manga sources and
+heavy processing run on Suwayomi-Server, not inside this client.
+Shared Flutter dependencies may still declare other platforms. The small
+adaptive-icon font dependency is retained because Flutter's icon tree shaker
+requires it; no non-Android application target or release artifact is built.
 
 ## Is this application usable? Should I test it?
 
@@ -48,67 +56,60 @@ Here is a list of current features for interaction with Sorayomi:
 
 These are the versions of [Suwayomi-Server][suwayomi-server] that Sorayomi supports.
 
-#### [Release build][release]
+#### Current Android build
 
-- [Suwayomi-Server][suwayomi-server] v0.6.6+
+- This source tree targets the current Suwayomi-Server GraphQL API, verified
+  against server revision `6b481e8b` (2026-10-21). Older servers without
+  `MangaType.user`, `ChapterType.user`, `userSettings`, or extension stores
+  are not supported by this build.
+- Library membership, reading progress, and automatic download/update
+  preferences use the logged-in user's data. Server-wide settings remain
+  separate. UI Login uses JWT authentication for GraphQL, subscriptions,
+  covers, reader image prefetch, and offline page downloads. Expired access
+  tokens share a single refresh attempt; failed refreshes keep the authentication
+  error visible.
+- Extension repositories use the extension-store API; both APK and JAR
+  extension uploads are supported.
 
 
 ## Downloading and Running the app
 
 ### Android
 
-Download *-android-all.apk file from latest release [the releases section][release].
+Build this fork with `flutter build apk --release`. The APK is written to
+`build/app/outputs/flutter-apk/app-release.apk`.
 
-
-### iOS
-
-- Download the latest .ipa file from [the releases section][release]
-- use [AltStore](https://altstore.io/) to install Sorayomi in ios.
-
-### Windows
-
-Download the latest .msi file from [the releases section][release].
-
-if you use WINGET, you can run
-```
-winget install tachidesk-sorayomi
-```
-
-### MacOS
-
-- Download the *-macos-x64.zip from the latest release [the releases section][release]
-- Extract the file.
-- Drag and drop the extracted app file to applications folder in finder.
-
-if you use HomeBrew, you can run
-```
-brew install --cask tachidesk-sorayomi
-```
-
-### Debian based Linux
-
-Download the latest deb release from [the releases section][release].
-
-### Arch based Linux
-
-Download the latest release from [the aur](https://aur.archlinux.org/packages/tachidesk-sorayomi-bin).
-
-If you use yay, you can run
-```
-yay -S tachidesk-sorayomi-bin
-```
-inside a terminal window.
-
-### Web
-
-Download the latest web.zip file from [the releases section][release].
-
-- Sorayomi-web deployed in GitHub pages. You can check out [Sorayomi here](https://suwayomi.github.io/Tachidesk-Sorayomi/).
+The [upstream releases][release] refer to the original Sorayomi project, not a
+published release of this fork.
 
 
 ## Post installation
 
   - Configure your server address in `Navigation bar > more screen > Server URL`.
+  - For servers configured with native **UI Login**, choose **Settings > Server >
+    Authentication > UI Login** and sign in with your server account. Use the
+    server's direct HTTPS address, not a temporary Home Assistant ingress URL.
+    Changing only the Android setting does not change the server's authentication
+    mode. **Basic Auth (legacy)** remains available for older server setups;
+    saved settings are not silently switched. A successful login clears cached
+    query data and chapter metadata so the new account does not inherit stale
+    user-specific state; downloaded page files remain on the device.
+  - In `Settings > General`, use **Clear Cache** to reset local GraphQL data,
+    cached chapter metadata, and image caches, or **Remove missing manga links**
+    to check cached IDs against the current server before removing stale local
+    references. Failed server checks never remove entries.
+  - Manga details include **Forget local manga**, even when the manga cannot
+    load. These actions never delete server manga or chapters, reset sign-in
+    settings, or remove downloaded page files. Chapter metadata may need to be reloaded
+    from the server after clearing caches.
+  - **Operation log** is available from **More**, **Settings > General**, and
+    the log icon on **Settings > Server** and the **UI Login** dialog, including
+    when login fails. It shows the last 500 GraphQL, media and cache operations.
+    Choose **Copy log** or **Export operation log** to share diagnostics.
+    Login errors are selectable and have a separate **Copy error** button.
+    Copy or export before restarting the app.
+    Logs are bounded, clear on app restart, and do not contain credentials,
+    request/response bodies, or server URLs. No logs are uploaded automatically.
 
 ## Building from source
 
@@ -123,11 +124,11 @@ You can install Flutter & Dart from [Official website](https://docs.flutter.dev/
 
 ### Building
 
-1.  Clone the repository:
+1.  Clone this Android fork:
 
 ```
-  $ git clone https://github.com/Suwayomi/Tachidesk-Sorayomi.git
-  $ cd Tachidesk-Sorayomi/
+  $ git clone https://github.com/devnagui/Suwayomi-Android.git
+  $ cd Suwayomi-Android
 ```
 2.  You can install all dependencies by running this command in terminal:
 
@@ -135,7 +136,14 @@ You can install Flutter & Dart from [Official website](https://docs.flutter.dev/
   $ flutter pub get
 ```
 
-3.  Now enter the following command to start debugging the app:
+3.  Generate the client models and API bindings (generated Dart files are
+    ignored by this repository):
+
+```
+  $ dart run build_runner build --delete-conflicting-outputs
+```
+
+4.  Now enter the following command to start debugging the app:
 
 ```
   $ flutter run
@@ -145,6 +153,28 @@ You can install Flutter & Dart from [Official website](https://docs.flutter.dev/
 ```
   $ flutter gen-l10n
 ```
+
+- When updating the server API, regenerate the schema from the target server,
+  replace `lib/src/graphql/schema.graphql`, and regenerate the client:
+```
+  $ dart run build_runner build --delete-conflicting-outputs
+  $ flutter analyze
+  $ flutter test
+  $ flutter build apk --release
+```
+  Do not hand-edit generated GraphQL files. GraphQL cursors are opaque strings,
+  not integer offsets. Existing offline chapter metadata is migrated when read.
+  Android asset paths are maintained in `lib/src/constants/assets.dart`;
+  `flutter_gen_runner` is not required.
+  `go_router_builder` is pinned to the version compatible with `go_router` 14.
+
+- GitHub pull requests and main-branch pushes regenerate the bindings and run
+  analysis/tests with Flutter 3.44.1 without requiring signing credentials.
+  Manual builds and release tags additionally build signed APKs and require
+  repository secrets `PLAY_STORE_UPLOAD_KEY`, `KEYSTORE_KEY_ALIAS`,
+  `KEYSTORE_STORE_PASSWORD`, and `KEYSTORE_KEY_PASSWORD`. Private signing keys
+  stay local unless the repository owner explicitly provisions those secrets;
+  missing secrets fail the signed build rather than changing the signing identity.
 
 - Pull-Request Suggestion
   - Install GitHooks after cloning the repo using `git config --local core.hooksPath .githooks`
@@ -156,7 +186,7 @@ You can install Flutter & Dart from [Official website](https://docs.flutter.dev/
 
 ## Built Using
 
-- [Flutter](https://flutter.dev/) is an open source framework by Google for building beautiful, natively compiled, multi-platform applications from a single codebase.
+- [Flutter](https://flutter.dev/) provides the native Android UI.
 
 - [Flutter Riverpod](https://pub.dev/packages/riverpod/) - A simple way to access state while robust and testable.
 

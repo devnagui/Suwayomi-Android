@@ -99,18 +99,19 @@ class HistoryRepository {
       ),
     ];
 
-    final result = await client
-        .query$GetReadingHistory(
-          Options$Query$GetReadingHistory(
-            variables: Variables$Query$GetReadingHistory(
-              first: pageSize * 10, // Get more results to filter duplicates
-              offset: pageNo * pageSize,
-              filter: filter,
-              order: order,
-            ),
+    final result = await networkFirstQuery(
+      (policy) => client.query$GetReadingHistory(
+        Options$Query$GetReadingHistory(
+          fetchPolicy: policy,
+          variables: Variables$Query$GetReadingHistory(
+            first: pageSize * 10, // Get more results to filter duplicates
+            offset: pageNo * pageSize,
+            filter: filter,
+            order: order,
           ),
-        )
-        .getData((data) => data.chapters);
+        ),
+      ),
+    ).getData((data) => data.chapters);
 
     // Filter to only show the most recent chapter per manga
     if (result?.nodes != null) {

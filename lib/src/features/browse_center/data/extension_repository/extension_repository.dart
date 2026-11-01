@@ -30,17 +30,20 @@ class ExtensionRepository {
     if ((file?.name).isBlank) {
       throw context.l10n.errorFilePick;
     }
-    if (!(file!.name.endsWith('.apk'))) {
-      throw context.l10n.errorFilePickUnknownExtension(".apk");
+    final extension = file!.extension?.toLowerCase();
+    if (extension != 'apk' && extension != 'jar') {
+      throw context.l10n.errorFilePickUnknownExtension(".apk, .jar");
     }
-    await client.mutate$InstallExternalExtension(
-      Options$Mutation$InstallExternalExtension(
-        variables: Variables$Mutation$InstallExternalExtension(
-          extensionFile:
-              await http.MultipartFile.fromPath("extensionFile", file.path!),
-        ),
-      ),
-    );
+    await client
+        .mutate$InstallExternalExtension(
+          Options$Mutation$InstallExternalExtension(
+            variables: Variables$Mutation$InstallExternalExtension(
+              extensionFile: await http.MultipartFile.fromPath(
+                  "extensionFile", file.path!),
+            ),
+          ),
+        )
+        .getData((data) => data.installExternalExtension);
   }
 
   Future<void> installExtension(String pkgName) =>

@@ -17,6 +17,15 @@ class SettingsRepository {
   Future<SettingsDto?> getServerSettings() => ferryClient
       .query$ServerSettings(Options$Query$ServerSettings())
       .getData((data) => data.settings);
+
+  Future<UserSettingsDto?> getUserSettings() => ferryClient
+      .query$UserSettings(Options$Query$UserSettings())
+      .getData((data) => data.userSettings);
+
+  Future<List<String>?> getExtensionStores() => ferryClient
+      .query$ExtensionStores(Options$Query$ExtensionStores())
+      .getData((data) =>
+          data.extensionStores.nodes.map((store) => store.indexUrl).toList());
 }
 
 @riverpod

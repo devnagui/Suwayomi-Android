@@ -22,6 +22,14 @@ typedef DownloadState = Enum$DownloadState;
 
 typedef DownloadUpdateType = Enum$DownloadUpdateType;
 
+extension DownloadChapterExtensions on Fragment$DownloadDto$chapter {
+  bool get isDownloaded => user.isDownloaded;
+}
+
+extension DownloadMangaExtensions on Fragment$DownloadDto$manga {
+  int get downloadCount => user.downloadCount;
+}
+
 extension DownloadStateExt on DownloadState {
   String toLocale(BuildContext context) => switch (this) {
         Enum$DownloadState.QUEUED => context.l10n.queued,

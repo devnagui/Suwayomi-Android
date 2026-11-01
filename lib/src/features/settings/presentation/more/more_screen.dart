@@ -7,13 +7,14 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../../constants/gen/assets.gen.dart';
+import '../../../../constants/assets.dart';
 import '../../../../constants/urls.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/launch_url_in_web.dart';
+import '../../../../utils/launch_external_url.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
+import '../general/cache_recovery_section.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -28,11 +29,12 @@ class MoreScreen extends ConsumerWidget {
       body: ListView(
         children: [
           ImageIcon(
-            AssetImage(Assets.icons.darkIcon.path),
+            AssetImage(AppAssets.darkIcon),
             size: context.height * .2,
           ),
           const Divider(),
           const ServerUrlTile(),
+          const OperationLogTile(),
           ListTile(
             title: Text(context.l10n.categories),
             leading: const Icon(Icons.label_rounded),
@@ -63,7 +65,7 @@ class MoreScreen extends ConsumerWidget {
           ListTile(
             title: Text(context.l10n.help),
             leading: const Icon(Icons.help_rounded),
-            onTap: () => launchUrlInWeb(
+            onTap: () => launchExternalUrl(
               context,
               AppUrls.tachideskHelp.url,
               ref.read(toastProvider),

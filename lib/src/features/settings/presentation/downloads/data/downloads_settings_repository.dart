@@ -33,17 +33,18 @@ class DownloadsSettingsRepository {
       )
       .getData((data) => data.setSettings.settings);
 
-  Future<SettingsDto?> toggleAutoDownloadNewChapters(bool value) => ferryClient
-      .mutate$ToggleAutoDownloadNewChapters(
-        Options$Mutation$ToggleAutoDownloadNewChapters(
-          variables: Variables$Mutation$ToggleAutoDownloadNewChapters(
-            autoDownloadNewChapters: value,
-          ),
-        ),
-      )
-      .getData((data) => data.setSettings.settings);
+  Future<UserSettingsDto?> toggleAutoDownloadNewChapters(bool value) =>
+      ferryClient
+          .mutate$ToggleAutoDownloadNewChapters(
+            Options$Mutation$ToggleAutoDownloadNewChapters(
+              variables: Variables$Mutation$ToggleAutoDownloadNewChapters(
+                autoDownloadNewChapters: value,
+              ),
+            ),
+          )
+          .getData((data) => data.setUserSettings.userSettings);
 
-  Future<SettingsDto?> toggleExcludeEntryWithUnreadChapters(bool value) =>
+  Future<UserSettingsDto?> toggleExcludeEntryWithUnreadChapters(bool value) =>
       ferryClient
           .mutate$ToggleExcludeEntryWithUnreadChapters(
             Options$Mutation$ToggleExcludeEntryWithUnreadChapters(
@@ -53,9 +54,9 @@ class DownloadsSettingsRepository {
               ),
             ),
           )
-          .getData((data) => data.setSettings.settings);
+          .getData((data) => data.setUserSettings.userSettings);
 
-  Future<SettingsDto?> updateAutoDownloadNewChaptersLimit(int value) =>
+  Future<UserSettingsDto?> updateAutoDownloadNewChaptersLimit(int value) =>
       ferryClient
           .mutate$UpdateAutoDownloadNewChaptersLimit(
             Options$Mutation$UpdateAutoDownloadNewChaptersLimit(
@@ -64,7 +65,7 @@ class DownloadsSettingsRepository {
               ),
             ),
           )
-          .getData((data) => data.setSettings.settings);
+          .getData((data) => data.setUserSettings.userSettings);
 }
 
 @riverpod

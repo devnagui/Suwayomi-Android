@@ -1,19 +1,11 @@
-import 'package:gql/language.dart' show gql;
-import 'package:gql_exec/gql_exec.dart';
-import 'package:gql_link/gql_link.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../constants/enum.dart';
+import '../../features/settings/presentation/server/data/graphql/__generated__/login.graphql.dart';
+import '../logger/auth_diagnostics.dart';
+import '../logger/operation_log.dart';
 import 'token_manager.dart';
-
-const _refreshTokenMutation = r'''
-mutation RefreshToken($input: RefreshTokenInput!) {
-  refreshToken(input: $input) {
-    accessToken
-  }
-}
-''';
 
 ErrorLink createAuthRefreshLink(Ref ref, AuthType authType) => ErrorLink(
       onGraphQLError: (request, forward, response) {
@@ -29,7 +21,7 @@ ErrorLink createAuthRefreshLink(Ref ref, AuthType authType) => ErrorLink(
           return null;
         }
         return _refreshAndRetryException(
-          ref, authType, request, forward, exception);
+            ref, authType, request, forward, exception);
       },
     );
 
@@ -40,14 +32,10 @@ Stream<Response> _refreshAndRetry(
   NextLink forward,
   Response originalResponse,
 ) async* {
-  try {
-    final refreshed = await _refresh(ref, authType, forward, request);
-    if (refreshed) {
-      yield* forward(request);
-      return;
-    }
-  } catch (_) {
-    // Keep the original response when refresh cannot be completed.
+  final refreshed = await _refresh(ref, authType, forward, request);
+  if (refreshed) {
+    yield* forward(request);
+    return;
   }
   yield originalResponse;
 }
@@ -59,14 +47,10 @@ Stream<Response> _refreshAndRetryException(
   NextLink forward,
   LinkException originalException,
 ) async* {
-  try {
-    final refreshed = await _refresh(ref, authType, forward, request);
-    if (refreshed) {
-      yield* forward(request);
-      return;
-    }
-  } catch (_) {
-    // Keep the original exception when refresh cannot be completed.
+  final refreshed = await _refresh(ref, authType, forward, request);
+  if (refreshed) {
+    yield* forward(request);
+    return;
   }
   yield* Stream<Response>.error(originalException);
 }
@@ -76,38 +60,74 @@ Future<bool> _refresh(
   AuthType authType,
   NextLink forward,
   Request request,
-) async {
-  final refreshToken = ref.read(uiLoginRefreshTokenProvider);
-  if (authType != AuthType.uiLogin || refreshToken == null) {
-    return false;
-  }
+) =>
+    ref.read(authTokenRefresherProvider).refresh(() async {
+      final refreshToken = ref.read(uiLoginRefreshTokenProvider);
+      if (authType != AuthType.uiLogin ||
+          refreshToken == null ||
+          refreshToken.trim().isEmpty) {
+        return false;
+      }
 
-  final refreshRequest = Request(
-    operation: Operation(
-      document: gql(_refreshTokenMutation),
-      operationName: 'RefreshToken',
-    ),
-    variables: {
-      'input': {'refreshToken': refreshToken},
-    },
-    context: request.context,
-  );
+      final refreshRequest = Request(
+        operation: Operation(
+          document: documentNodeMutationRefreshToken,
+          operationName: 'RefreshToken',
+        ),
+        variables: {
+          'input': {'refreshToken': refreshToken},
+        },
+        context: request.context,
+      );
 
-  final refreshResponse = await forward(refreshRequest).first;
-  final accessToken = refreshResponse.data?['refreshToken']?['accessToken'];
-  if (refreshResponse.errors?.isNotEmpty ?? true) {
-    return false;
-  }
-  if (accessToken is! String || accessToken.isEmpty) return false;
+      final result = await AsyncValue.guard(() async {
+        OperationLog.instance.record('RefreshToken', outcome: 'started');
+        final refreshResponse = await forward(refreshRequest).first;
+        if (refreshResponse.errors?.isNotEmpty == true) {
+          OperationLog.instance.record('RefreshToken',
+              outcome: 'graphql_error',
+              errorCount: refreshResponse.errors!.length,
+              authIssue:
+                  classifyAuthIssue(refreshResponse.errors!.first.message));
+          return false;
+        }
+        final data = refreshResponse.data;
+        if (data == null) {
+          throw StateError('Token refresh returned no data');
+        }
+        final accessToken =
+            Mutation$RefreshToken.fromJson(data).refreshToken.accessToken;
+        if (accessToken.trim().isEmpty) {
+          throw StateError('Token refresh returned an empty access token');
+        }
 
-  ref.read(uiLoginAccessTokenProvider.notifier).update(accessToken);
-  return true;
-}
+        if (ref.read(uiLoginRefreshTokenProvider) != refreshToken) {
+          OperationLog.instance.record('RefreshToken', outcome: 'superseded');
+          return false;
+        }
+        ref.read(uiLoginAccessTokenProvider.notifier).update(accessToken);
+        OperationLog.instance.record('RefreshToken', outcome: 'completed');
+        return true;
+      });
+      if (result.hasError) {
+        final failure = result.error;
+        final status = failure is HttpLinkServerException
+            ? failure.response.statusCode
+            : null;
+        OperationLog.instance.record('RefreshToken',
+            outcome: 'failed',
+            errorType: failure.runtimeType.toString(),
+            httpStatus: status,
+            authIssue: status == 401 ? AuthIssue.unauthorized : null);
+        return false;
+      }
+      return result.requireValue;
+    });
 
-bool _isAuthFailure(Response response) => response.errors?.any((error) {
+bool _isAuthFailure(Response response) =>
+    response.errors?.any((error) {
       final message = error.message.toLowerCase();
       return message.contains('unauthorized') ||
-          message.contains('forbidden') ||
           message.contains('authentication');
     }) ??
     false;
@@ -115,5 +135,5 @@ bool _isAuthFailure(Response response) => response.errors?.any((error) {
 bool _isAuthException(LinkException exception) {
   if (exception is! HttpLinkServerException) return false;
   final statusCode = exception.response.statusCode;
-  return statusCode == 401 || statusCode == 403;
+  return statusCode == 401;
 }
