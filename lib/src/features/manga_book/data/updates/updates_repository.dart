@@ -74,13 +74,23 @@ class UpdatesRepository {
     }
   }
 
-  Future<void> stopUpdates() => client.mutate$StopCategoryUpdate(
-        Options$Mutation$StopCategoryUpdate(
-          variables: Variables$Mutation$StopCategoryUpdate(
-            input: Input$UpdateStopInput(),
-          ),
+  Future<void> stopUpdates({int? mangaId}) async {
+    final result = await client.mutate$StopCategoryUpdate(
+      Options$Mutation$StopCategoryUpdate(
+        variables: Variables$Mutation$StopCategoryUpdate(
+          input: mangaId == null
+              ? Input$UpdateStopInput()
+              : Input$UpdateStopInput(mangaIds: [mangaId]),
         ),
-      );
+      ),
+    );
+    if (result.hasException) {
+      throw OperationMessageException(result.exception!);
+    }
+    if (result.parsedData?.updateStop == null) {
+      throw StateError('Stopping updates returned no result');
+    }
+  }
 
   Future<UpdateStatusDto?> summaryUpdates() async => client
       .query$UpdateStatusDto(Options$Query$UpdateStatusDto())

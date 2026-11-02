@@ -1357,6 +1357,10 @@
     "uiLoginHttpUnauthorized": "The login endpoint returned HTTP 401. Check that the server uses UI Login and is not behind the old Basic-auth proxy.",
     "uiLoginHttpFailure": "The login endpoint returned HTTP {status}. Open the operation log for diagnostics.",
     "@uiLoginHttpFailure": {"placeholders": {"status": {"type": "int"}}},
+    "cancelAllUpdates": "Cancel all updates",
+    "cancelAllUpdatesDescription": "Stop running and queued library update checks for all manga? Your library and chapters will not be deleted.",
+    "cancelMangaUpdate": "Cancel update",
+    "cancelMangaUpdateUnsupported": "This server does not support cancelling one manga. Update the server or use Cancel all updates.",
     "authTypeBasicLegacy": "Basic Auth (legacy)",
     "authTypeBasicLegacyDescription": "For older server setups only. Use UI Login when the server is configured for UI Login."
 }
