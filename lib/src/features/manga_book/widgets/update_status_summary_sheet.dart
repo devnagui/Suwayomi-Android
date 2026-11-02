@@ -13,6 +13,7 @@ import '../../../widgets/manga_cover/list/manga_cover_list_tile.dart';
 import '../data/updates/updates_repository.dart';
 import '../domain/manga/manga_model.dart';
 import '../domain/update_status/update_status_model.dart';
+import 'stop_updates_button.dart';
 import 'update_status_popup_menu.dart';
 
 class UpdateStatusSummaryDialog extends ConsumerWidget {
@@ -29,7 +30,10 @@ class UpdateStatusSummaryDialog extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(context.l10n.updatesSummary),
-        actions: const [UpdateStatusPopupMenu(showSummaryButton: false)],
+        actions: const [
+          StopUpdatesButton(),
+          UpdateStatusPopupMenu(showSummaryButton: false),
+        ],
       ),
       body: finalStatus.showUiWhenData(
         context,
@@ -42,11 +46,13 @@ class UpdateStatusSummaryDialog extends ConsumerWidget {
                   mangas: data!.runningJobs.mangaList,
                   title: context.l10n.running,
                   initiallyExpanded: true,
+                  canCancel: true,
                 ),
               if ((data?.pendingJobs.mangaList).isNotBlank)
                 UpdateStatusExpansionTile(
                   mangas: data!.pendingJobs.mangaList,
                   title: context.l10n.pending,
+                  canCancel: true,
                 ),
               if ((data?.completeJobs.mangaList).isNotBlank)
                 UpdateStatusExpansionTile(
@@ -74,10 +80,12 @@ class UpdateStatusExpansionTile extends StatelessWidget {
     required this.mangas,
     required this.title,
     this.initiallyExpanded = false,
+    this.canCancel = false,
   });
   final List<MangaDto> mangas;
   final String title;
   final bool initiallyExpanded;
+  final bool canCancel;
   @override
   Widget build(BuildContext context) {
     return ExpansionTile(
@@ -87,10 +95,16 @@ class UpdateStatusExpansionTile extends StatelessWidget {
       iconColor: context.theme.indicatorColor,
       shape: const RoundedRectangleBorder(),
       children: mangas
-          .map((e) => MangaCoverListTile(
-                manga: e,
-                showCountBadges: true,
-                onPressed: () => MangaRoute(mangaId: e.id).push(context),
+          .map((e) => Row(
+                children: [
+                  Expanded(
+                      child: MangaCoverListTile(
+                    manga: e,
+                    showCountBadges: true,
+                    onPressed: () => MangaRoute(mangaId: e.id).push(context),
+                  )),
+                  if (canCancel) StopUpdatesButton(mangaId: e.id),
+                ],
               ))
           .toList(),
     );

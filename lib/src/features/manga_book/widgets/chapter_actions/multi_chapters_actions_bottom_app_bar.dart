@@ -43,86 +43,93 @@ class MultiChaptersActionsBottomAppBar extends HookConsumerWidget {
 
     final selectedList = selectedChapters.value.values;
 
-    return Padding(
-      padding: KEdgeInsets.a8.size,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          if (selectedList.any((e) => e.isBookmarked.ifNull()))
-            MultiChaptersActionIcon(
-              iconData: Icons.bookmark_remove_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isBookmarked: false),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => !(e.isBookmarked.ifNull())))
-            MultiChaptersActionIcon(
-              iconData: Icons.bookmark_add_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isBookmarked: true),
-              refresh: refresh,
-            ),
-          if (selectedList.isSingletonList && chapterList.isNotBlank)
-            MultiChaptersActionIcon(
-              chapterList: [
-                for (final chapter in chapterList!)
-                  if (firstChapter.index > chapter.index) chapter.id
-              ],
-              icon: ImageIcon(
-                const AssetImage(AppAssets.previousDone),
-                color: context.theme.cardTheme.color,
-              ),
-              change: ChapterChange(isRead: true),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => !(e.isRead.ifNull())))
-            MultiChaptersActionIcon(
-              iconData: Icons.done_all_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isRead: true, lastPageRead: 0),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => e.isRead.ifNull()))
-            MultiChaptersActionIcon(
-              iconData: Icons.remove_done_rounded,
-              chapterList: selectedChapterList,
-              change: ChapterChange(isRead: false),
-              refresh: refresh,
-            ),
-          if (selectedList.any((e) => !(e.isDownloaded.ifNull())))
-            IconButton(
-              icon: Icon(Icons.download_rounded),
-              onPressed: () async {
-                final result = await AsyncValue.guard(
-                  () => ref
-                      .read(downloadsRepositoryProvider)
-                      .addChaptersBatchToDownloadQueue([
-                    for (var e in selectedList)
-                      if (!(e.isDownloaded.ifNull(true))) (e.id)
-                  ]),
-                );
-                if (context.mounted) {
-                  result.showToastOnError(ref.read(toastProvider));
-                }
-                await refresh(true);
-              },
-            ),
-          if (selectedList.any((e) => e.isDownloaded.ifNull()))
-            IconButton(
-              icon: Icon(Icons.delete_rounded),
-              onPressed: () async {
-                final result = await AsyncValue.guard(
-                  () => ref
-                      .read(mangaBookRepositoryProvider)
-                      .deleteChapters(selectedChapterList),
-                );
-                if (context.mounted) {
-                  result.showToastOnError(ref.read(toastProvider));
-                }
-                await refresh(true);
-              },
-            ),
-        ],
+    return Material(
+      color: context.theme.colorScheme.surface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: KEdgeInsets.a8.size,
+          child: Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (selectedList.any((e) => e.isBookmarked.ifNull()))
+                MultiChaptersActionIcon(
+                  iconData: Icons.bookmark_remove_rounded,
+                  chapterList: selectedChapterList,
+                  change: ChapterChange(isBookmarked: false),
+                  refresh: refresh,
+                ),
+              if (selectedList.any((e) => !(e.isBookmarked.ifNull())))
+                MultiChaptersActionIcon(
+                  iconData: Icons.bookmark_add_rounded,
+                  chapterList: selectedChapterList,
+                  change: ChapterChange(isBookmarked: true),
+                  refresh: refresh,
+                ),
+              if (selectedList.isSingletonList && chapterList.isNotBlank)
+                MultiChaptersActionIcon(
+                  chapterList: [
+                    for (final chapter in chapterList!)
+                      if (firstChapter.index > chapter.index) chapter.id
+                  ],
+                  icon: ImageIcon(
+                    const AssetImage(AppAssets.previousDone),
+                    color: context.theme.cardTheme.color,
+                  ),
+                  change: ChapterChange(isRead: true),
+                  refresh: refresh,
+                ),
+              if (selectedList.any((e) => !(e.isRead.ifNull())))
+                MultiChaptersActionIcon(
+                  iconData: Icons.done_all_rounded,
+                  chapterList: selectedChapterList,
+                  change: ChapterChange(isRead: true, lastPageRead: 0),
+                  refresh: refresh,
+                ),
+              if (selectedList.any((e) => e.isRead.ifNull()))
+                MultiChaptersActionIcon(
+                  iconData: Icons.remove_done_rounded,
+                  chapterList: selectedChapterList,
+                  change: ChapterChange(isRead: false),
+                  refresh: refresh,
+                ),
+              if (selectedList.any((e) => !(e.isDownloaded.ifNull())))
+                IconButton(
+                  icon: Icon(Icons.download_rounded),
+                  onPressed: () async {
+                    final result = await AsyncValue.guard(
+                      () => ref
+                          .read(downloadsRepositoryProvider)
+                          .addChaptersBatchToDownloadQueue([
+                        for (var e in selectedList)
+                          if (!(e.isDownloaded.ifNull(true))) (e.id)
+                      ]),
+                    );
+                    if (context.mounted) {
+                      result.showToastOnError(ref.read(toastProvider));
+                    }
+                    await refresh(true);
+                  },
+                ),
+              if (selectedList.any((e) => e.isDownloaded.ifNull()))
+                IconButton(
+                  icon: Icon(Icons.delete_rounded),
+                  onPressed: () async {
+                    final result = await AsyncValue.guard(
+                      () => ref
+                          .read(mangaBookRepositoryProvider)
+                          .deleteChapters(selectedChapterList),
+                    );
+                    if (context.mounted) {
+                      result.showToastOnError(ref.read(toastProvider));
+                    }
+                    await refresh(true);
+                  },
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -271,7 +271,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
             width: kDrawerWidth,
             child: MangaChapterOrganizer(mangaId: mangaId),
           ),
-          bottomSheet: selectedChapters.value.isNotEmpty
+          bottomNavigationBar: selectedChapters.value.isNotEmpty
               ? MultiChaptersActionsBottomAppBar(
                   afterOptionSelected: chapterListRefresh,
                   selectedChapters: selectedChapters,

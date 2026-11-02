@@ -86,6 +86,15 @@ published release of this fork.
 ## Post installation
 
   - Configure your server address in `Navigation bar > more screen > Server URL`.
+  - Chapter selection actions on manga details and Updates reserve their own
+    space above Android's navigation buttons/gesture area. The action surface
+    is opaque and wraps on narrow displays rather than covering chapter rows.
+  - **Updates** and **Updates summary** expose **Cancel all updates** while
+    checks are active. Confirmation stops running/queued checks, not chapter
+    downloads, and does not remove manga, chapters, or library membership.
+    Running and pending manga in **Updates summary** have individual **Cancel
+    update** buttons. These require the server's scoped `mangaIds` cancellation
+    support; an older server shows an error rather than cancelling every manga.
   - For servers configured with native **UI Login**, choose **Settings > Server >
     Authentication > UI Login** and sign in with your server account. Use the
     server's direct HTTPS address, not a temporary Home Assistant ingress URL.

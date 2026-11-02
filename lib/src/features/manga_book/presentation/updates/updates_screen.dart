@@ -17,6 +17,7 @@ import '../../data/updates/updates_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter/graphql/__generated__/fragment.graphql.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
+import '../../widgets/stop_updates_button.dart';
 import '../../widgets/update_status_fab.dart';
 import '../../widgets/update_status_popup_menu.dart';
 import '../reader/controller/reader_controller.dart';
@@ -97,9 +98,9 @@ class UpdatesScreen extends HookConsumerWidget {
             )
           : AppBar(
               title: Text(context.l10n.updates),
-              actions: const [UpdateStatusPopupMenu()],
+              actions: const [StopUpdatesButton(), UpdateStatusPopupMenu()],
             ),
-      bottomSheet: selectedChapters.value.isNotEmpty
+      bottomNavigationBar: selectedChapters.value.isNotEmpty
           ? MultiChaptersActionsBottomAppBar(
               selectedChapters: selectedChapters,
               afterOptionSelected: () async => controller.refresh(),
