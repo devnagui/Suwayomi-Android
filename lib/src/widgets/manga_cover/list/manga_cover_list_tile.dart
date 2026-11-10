@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
+import '../../custom_circular_progress_indicator.dart';
 import '../../server_image.dart';
 import '../widgets/manga_badges.dart';
 
@@ -19,6 +20,7 @@ class MangaCoverListTile extends StatelessWidget {
     this.onLongPress,
     this.showBadges = true,
     this.showCountBadges = false,
+    this.isLoading = false,
   });
 
   final MangaDto manga;
@@ -26,6 +28,7 @@ class MangaCoverListTile extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool showCountBadges;
   final bool showBadges;
+  final bool isLoading;
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -55,6 +58,11 @@ class MangaCoverListTile extends StatelessWidget {
           ),
           if (showBadges)
             MangaBadgesRow(manga: manga, showCountBadges: showCountBadges),
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.all(8),
+              child: MiniCircularProgressIndicator(),
+            ),
         ],
       ),
     );

@@ -11,6 +11,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../utils/logger/operation_log.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/network/local_download_queue.dart';
 import '../../../utils/network/offline_chapter_manager.dart';
@@ -71,20 +72,35 @@ class DownloadStatusIcon extends HookConsumerWidget {
   }
 
   /// Remove both the server-side download and the on-device offline copy.
-  Future<void> _removeDownload(WidgetRef ref, Toast? toast) async {
-    (await AsyncValue.guard(
+  Future<bool> _removeDownload(WidgetRef ref, Toast? toast) async {
+    OperationLog.instance.record(
+      'DownloadUiAction',
+      outcome: 'triggered',
+      action: 'remove_download',
+      mangaId: mangaId,
+      chapterId: chapter.id,
+    );
+    final serverResult = await AsyncValue.guard(
       () => ref.read(mangaBookRepositoryProvider).deleteChapters([chapter.id]),
-    ))
-        .showToastOnError(toast);
-    await ref
-        .read(offlineChapterManagerProvider)
-        .deleteOfflineChapter(mangaId, chapter.id);
+    );
+    serverResult.showToastOnError(toast);
+    if (serverResult.hasError) return false;
+
+    final localResult = await AsyncValue.guard(
+      () => ref
+          .read(offlineChapterManagerProvider)
+          .deleteOfflineChapter(mangaId, chapter.id),
+    );
+    localResult.showToastOnError(toast);
+    if (localResult.hasError) return false;
+
     ref.invalidate(
       isChapterOfflineProvider(mangaId: mangaId, chapterId: chapter.id),
     );
+    return true;
   }
 
-  Future toggleChapterToQueue(
+  Future<bool> toggleChapterToQueue(
     Toast? toast,
     WidgetRef ref, {
     bool isAdd = false,
@@ -92,6 +108,17 @@ class DownloadStatusIcon extends HookConsumerWidget {
     bool isError = false,
   }) async {
     try {
+      OperationLog.instance.record(
+        'DownloadUiAction',
+        outcome: 'triggered',
+        action: isError
+            ? 'retry_chapter'
+            : isRemove
+                ? 'dequeue_chapter'
+                : 'enqueue_chapter',
+        mangaId: mangaId,
+        chapterId: chapter.id,
+      );
       final result = await AsyncValue.guard(() async {
         final repo = ref.read(downloadsRepositoryProvider);
         if (isRemove || isError) {
@@ -99,15 +126,19 @@ class DownloadStatusIcon extends HookConsumerWidget {
         }
         if (isAdd || isError) {
           await repo.addChaptersBatchToDownloadQueue([chapter.id]);
-          // Auto-start the downloader when enqueuing
-          await repo.startDownloads();
         }
       });
       if (result.hasError) {
         toast?.showError('Erro ao iniciar download. Verifique a conexão.');
+        return false;
       }
+      await AsyncValue.guard(
+        ref.read(downloadsMapProvider.notifier).refresh,
+      );
+      return true;
     } catch (e) {
       toast?.showError('Erro ao iniciar download.');
+      return false;
     }
   }
 
@@ -145,11 +176,23 @@ class DownloadStatusIcon extends HookConsumerWidget {
     final toast = ref.watch(toastProvider);
     final downloadUpdate = ref.watch(downloadsFromIdProvider(chapter.id));
 
+    Future<void> removeDownloaded() async {
+      if (isLoading.value || !await _confirmRemove(context)) return;
+      isLoading.value = true;
+      try {
+        if (await _removeDownload(ref, toast) && context.mounted) {
+          localIsDownloaded.value = false;
+          await updateData();
+        }
+      } finally {
+        if (context.mounted) isLoading.value = false;
+      }
+    }
+
     // Clear optimistic state once the download shows up in the queue or the
     // local caching pipeline has picked it up.
     useEffect(() {
-      if ((downloadUpdate != null || cacheState != null) &&
-          isEnqueuing.value) {
+      if ((downloadUpdate != null || cacheState != null) && isEnqueuing.value) {
         isEnqueuing.value = false;
       }
       return null;
@@ -185,19 +228,28 @@ class DownloadStatusIcon extends HookConsumerWidget {
     if (downloadUpdate != null) {
       if (downloadUpdate.state == DownloadState.ERROR) {
         return IconButton(
-          onPressed: () {
-            isEnqueuing.value = true;
-            toggleChapterToQueue(toast, ref, isError: true).then((_) {
-              Future.delayed(const Duration(seconds: 8), () {
-                if (isEnqueuing.value) isEnqueuing.value = false;
-              });
-            });
+          onPressed: () async {
+            if (isLoading.value) return;
+            isLoading.value = true;
+            try {
+              await toggleChapterToQueue(toast, ref, isError: true);
+            } finally {
+              if (context.mounted) isLoading.value = false;
+            }
           },
           icon: const Icon(Icons.replay_rounded),
         );
       }
       return IconButton(
-        onPressed: () => toggleChapterToQueue(toast, ref, isRemove: true),
+        onPressed: () async {
+          if (isLoading.value || !await _confirmRemove(context)) return;
+          isLoading.value = true;
+          try {
+            await toggleChapterToQueue(toast, ref, isRemove: true);
+          } finally {
+            if (context.mounted) isLoading.value = false;
+          }
+        },
         icon: MiniCircularProgressIndicator(
           value: downloadUpdate.progress == 0 ? null : downloadUpdate.progress,
           color: context.iconColor,
@@ -225,9 +277,18 @@ class DownloadStatusIcon extends HookConsumerWidget {
           return IconButton(
             tooltip: context.l10n.retry,
             icon: const Icon(Icons.error_outline_rounded, color: Colors.red),
-            onPressed: () => ref
-                .read(localDownloadQueueProvider.notifier)
-                .retry(mangaId, chapter.id),
+            onPressed: () {
+              OperationLog.instance.record(
+                'DownloadUiAction',
+                outcome: 'triggered',
+                action: 'retry_local_cache',
+                mangaId: mangaId,
+                chapterId: chapter.id,
+              );
+              ref
+                  .read(localDownloadQueueProvider.notifier)
+                  .retry(mangaId, chapter.id);
+            },
           );
         case LocalCacheStatus.done:
           break;
@@ -239,12 +300,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
       return IconButton(
         icon: const Icon(Icons.download_done_rounded, color: Colors.green),
         tooltip: 'Available offline',
-        onPressed: () async {
-          if (!await _confirmRemove(context)) return;
-          await _removeDownload(ref, toast);
-          localIsDownloaded.value = false;
-          await newUpdatePair(ref, (value) => isLoading.value = value);
-        },
+        onPressed: removeDownloaded,
       );
     }
 
@@ -252,12 +308,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
     if (localIsDownloaded.value) {
       return IconButton(
         icon: const Icon(Icons.check_circle_rounded),
-        onPressed: () async {
-          if (!await _confirmRemove(context)) return;
-          await _removeDownload(ref, toast);
-          localIsDownloaded.value = false;
-          await newUpdatePair(ref, (value) => isLoading.value = value);
-        },
+        onPressed: removeDownloaded,
       );
     }
 
@@ -272,12 +323,18 @@ class DownloadStatusIcon extends HookConsumerWidget {
     // Nothing downloaded yet — offer to enqueue a server download.
     return IconButton(
       icon: const Icon(Icons.download_for_offline_rounded),
-      onPressed: () {
+      onPressed: () async {
         isEnqueuing.value = true;
-        toggleChapterToQueue(toast, ref, isAdd: true).then((_) {
-          Future.delayed(const Duration(seconds: 8), () {
-            if (isEnqueuing.value) isEnqueuing.value = false;
-          });
+        final queued = await toggleChapterToQueue(toast, ref, isAdd: true);
+        if (!context.mounted) return;
+        if (!queued) {
+          isEnqueuing.value = false;
+          return;
+        }
+        Future.delayed(const Duration(seconds: 8), () {
+          if (context.mounted && isEnqueuing.value) {
+            isEnqueuing.value = false;
+          }
         });
       },
     );

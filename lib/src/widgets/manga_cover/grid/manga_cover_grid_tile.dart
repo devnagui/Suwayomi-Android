@@ -11,6 +11,7 @@ import '../../../constants/assets.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
 import '../../../features/manga_book/presentation/manga_thumbnail_viewer/manga_thumbnail_viewer.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../custom_circular_progress_indicator.dart';
 import '../../server_image.dart';
 import '../widgets/manga_badges.dart';
 
@@ -24,6 +25,7 @@ class MangaCoverGridTile extends StatelessWidget {
     this.showBadges = true,
     this.showCountBadges = false,
     this.showDarkOverlay = true,
+    this.isLoading = false,
   });
   final MangaDto manga;
   final VoidCallback? onPressed;
@@ -32,6 +34,7 @@ class MangaCoverGridTile extends StatelessWidget {
   final bool showTitle;
   final bool showBadges;
   final bool showDarkOverlay;
+  final bool isLoading;
   @override
   Widget build(BuildContext context) {
     return InkResponse(
@@ -82,42 +85,55 @@ class MangaCoverGridTile extends StatelessWidget {
                   ),
                 )
               : null,
-          child: manga.thumbnailUrl.isNotBlank
-              ? Container(
-                  foregroundDecoration: BoxDecoration(
-                    border: Border.all(
-                      width: 0,
-                      color: context.theme.canvasColor,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              manga.thumbnailUrl.isNotBlank
+                  ? Container(
+                      foregroundDecoration: BoxDecoration(
+                        border: Border.all(
+                          width: 0,
+                          color: context.theme.canvasColor,
+                        ),
+                        boxShadow: showDarkOverlay
+                            ? [
+                                BoxShadow(
+                                  color: context.theme.canvasColor
+                                      .withValues(alpha: .5),
+                                )
+                              ]
+                            : null,
+                        gradient: showTitle
+                            ? LinearGradient(
+                                begin: Alignment.center,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  context.theme.canvasColor
+                                      .withValues(alpha: 0),
+                                  context.theme.canvasColor
+                                      .withValues(alpha: 0.4),
+                                  context.theme.canvasColor
+                                      .withValues(alpha: 0.9),
+                                ],
+                              )
+                            : null,
+                      ),
+                      child: ServerImage(imageUrl: manga.thumbnailUrl ?? ""),
+                    )
+                  : SizedBox(
+                      height: context.height * .3,
+                      child: ImageIcon(
+                        AssetImage(AppAssets.darkIcon),
+                        size: context.height * .2,
+                      ),
                     ),
-                    boxShadow: showDarkOverlay
-                        ? [
-                            BoxShadow(
-                              color: context.theme.canvasColor
-                                  .withValues(alpha: .5),
-                            )
-                          ]
-                        : null,
-                    gradient: showTitle
-                        ? LinearGradient(
-                            begin: Alignment.center,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              context.theme.canvasColor.withValues(alpha: 0),
-                              context.theme.canvasColor.withValues(alpha: 0.4),
-                              context.theme.canvasColor.withValues(alpha: 0.9),
-                            ],
-                          )
-                        : null,
-                  ),
-                  child: ServerImage(imageUrl: manga.thumbnailUrl ?? ""),
-                )
-              : SizedBox(
-                  height: context.height * .3,
-                  child: ImageIcon(
-                    AssetImage(AppAssets.darkIcon),
-                    size: context.height * .2,
-                  ),
+              if (isLoading)
+                const ColoredBox(
+                  color: Colors.black26,
+                  child: Center(child: MiniCircularProgressIndicator()),
                 ),
+            ],
+          ),
         ),
       ),
     );

@@ -30,12 +30,15 @@ class AsyncListTile extends HookWidget {
       title: title,
       subtitle: subtitle,
       trailing: trailing,
-      onTap: onTap == null
+      onTap: onTap == null || isLoading.value
           ? null
           : () async {
               isLoading.value = true;
-              await onTap?.call(isLoading);
-              isLoading.value = false;
+              try {
+                await onTap?.call(isLoading);
+              } finally {
+                if (context.mounted) isLoading.value = false;
+              }
             },
     );
   }

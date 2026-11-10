@@ -9,8 +9,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../routes/router_config.dart';
 import '../../../utils/extensions/custom_extensions.dart';
+import '../../../widgets/custom_circular_progress_indicator.dart';
 import '../data/updates/updates_repository.dart';
 import '../domain/update_status/update_status_model.dart';
+import 'update_status_popup_menu.dart';
 
 class UpdateStatusFab extends ConsumerWidget {
   const UpdateStatusFab({super.key});
@@ -19,15 +21,25 @@ class UpdateStatusFab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final updateStatus = ref.watch(updatesSocketProvider);
     final showStatus = (updateStatus.valueOrNull?.isUpdateChecking).ifNull();
+    final isStarting = ref.watch(updateRequestInFlightProvider);
+    if (isStarting && showStatus) {
+      Future.microtask(
+        () => ref.read(updateRequestInFlightProvider.notifier).state = false,
+      );
+    }
     return FloatingActionButton.extended(
-      icon: showStatus ? null : const Icon(Icons.refresh_rounded),
-      onPressed: () => showStatus
-          ? const UpdateStatusRoute().push(context)
-          : ref.read(updatesRepositoryProvider).fetchUpdates(),
+      icon: showStatus || isStarting ? null : const Icon(Icons.refresh_rounded),
+      onPressed: isStarting
+          ? null
+          : () => showStatus
+              ? const UpdateStatusRoute().push(context)
+              : requestLibraryUpdate(ref),
       label: showStatus
           ? Text("${updateStatus.valueOrNull?.updateChecked.padLeft()}"
               "/${updateStatus.valueOrNull?.total.padLeft()}")
-          : Text(context.l10n.update),
+          : isStarting
+              ? const MiniCircularProgressIndicator()
+              : Text(context.l10n.update),
     );
   }
 }

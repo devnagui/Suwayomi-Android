@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../utils/extensions/custom_extensions.dart';
+import '../custom_circular_progress_indicator.dart';
 
 class AsyncCheckboxListTile extends HookWidget {
   const AsyncCheckboxListTile({
@@ -18,21 +19,33 @@ class AsyncCheckboxListTile extends HookWidget {
   });
 
   final bool value;
-  final ValueChanged<bool>? onChanged;
+  final Future<bool> Function(bool)? onChanged;
   final Widget title;
   @override
   Widget build(BuildContext context) {
     final localValue = useState(value);
+    final isLoading = useState(false);
     useEffect(() {
       localValue.value = value;
       return null;
     }, [value]);
     return CheckboxListTile(
       value: localValue.value,
-      onChanged: onChanged != null
-          ? (val) {
-              localValue.value = (val.ifNull());
-              onChanged!(val.ifNull());
+      secondary: isLoading.value ? const MiniCircularProgressIndicator() : null,
+      onChanged: onChanged != null && !isLoading.value
+          ? (val) async {
+              final previousValue = localValue.value;
+              localValue.value = val.ifNull();
+              isLoading.value = true;
+              try {
+                final succeeded = await onChanged!(val.ifNull());
+                if (!succeeded) localValue.value = previousValue;
+              } catch (_) {
+                localValue.value = previousValue;
+                rethrow;
+              } finally {
+                isLoading.value = false;
+              }
             }
           : null,
       title: title,

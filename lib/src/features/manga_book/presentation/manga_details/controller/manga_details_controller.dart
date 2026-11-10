@@ -59,6 +59,19 @@ class MangaChapterList extends _$MangaChapterList {
       //
     }
   }
+
+  void updateChapters(Iterable<ChapterDto> chapters) {
+    final current = state.valueOrNull;
+    if (current == null) {
+      throw StateError('Chapter list is not available for a local update');
+    }
+    final updates = {for (final chapter in chapters) chapter.id: chapter};
+    state = AsyncData<List<ChapterDto>?>(
+      [
+        for (final chapter in current) updates[chapter.id] ?? chapter,
+      ],
+    ).copyWithPrevious(state);
+  }
 }
 
 @riverpod

@@ -274,6 +274,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
           bottomNavigationBar: selectedChapters.value.isNotEmpty
               ? MultiChaptersActionsBottomAppBar(
                   afterOptionSelected: chapterListRefresh,
+                  onChaptersUpdated: (chapters) async => ref
+                      .read(chapterListProvider.notifier)
+                      .updateChapters(chapters),
                   selectedChapters: selectedChapters,
                   chapterList: filteredChapterList.value,
                 )

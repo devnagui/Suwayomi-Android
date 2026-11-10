@@ -125,10 +125,12 @@ GraphQLClient graphQlSubscriptionClient(Ref ref) {
           'Authorization': credentials!,
       },
       initialPayload: () {
-        final token = ref.read(uiLoginAccessTokenProvider);
+        final token = ref.read(uiLoginAccessTokenProvider)?.trim();
         return {
+          // Suwayomi's WebSocket connection payload expects the JWT itself;
+          // HTTP Authorization headers use the Bearer scheme separately.
           if (authType == AuthType.uiLogin && token.isNotBlank)
-            'Authorization': token!,
+            'Authorization': token,
         };
       },
     ),

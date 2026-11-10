@@ -343,6 +343,16 @@ void main() {
     expect(bounded.value, hasLength(3));
     expect(bounded.value.first, contains('Step7'));
     expect(bounded.value.last, contains('Step9'));
+    bounded.record(
+      'DownloadUiAction',
+      outcome: 'triggered',
+      action: 'enqueue_selection',
+      count: 2,
+    );
+    expect(
+      bounded.value.last,
+      contains('DownloadUiAction triggered action=enqueue_selection count=2'),
+    );
     bounded.clear();
     expect(bounded.value, isEmpty);
     expect(() => OperationLog(capacity: 0), throwsArgumentError);

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../constants/app_constants.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/popup_widgets/multi_select_popup.dart';
 import '../../../../../widgets/popup_widgets/radio_list_popup.dart';
 import '../../../../../widgets/popup_widgets/text_field_popup.dart';
@@ -18,10 +19,12 @@ class SourcePreferenceToWidget extends StatelessWidget {
     super.key,
     required this.sourcePreference,
     required this.onChanged,
+    this.isLoading = false,
   });
 
   final SourcePreference sourcePreference;
   final ValueChanged<SourcePreferenceChange> onChanged;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +42,13 @@ class SourcePreferenceToWidget extends StatelessWidget {
           title: Text(title),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           value: currentValue.ifNull(defaultValue.ifNull()),
-          onChanged: (value) => onChanged(SourcePreferenceChange(
-            checkBoxState: value,
-            position: kPositionPlaceholder,
-          )),
+          secondary: isLoading ? const MiniCircularProgressIndicator() : null,
+          onChanged: isLoading
+              ? null
+              : (value) => onChanged(SourcePreferenceChange(
+                    checkBoxState: value,
+                    position: kPositionPlaceholder,
+                  )),
           controlAffinity: ListTileControlAffinity.trailing,
         ),
       SwitchPreferenceCompat(
@@ -57,10 +63,13 @@ class SourcePreferenceToWidget extends StatelessWidget {
           title: Text(title),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
           value: currentValue.ifNull(defaultValue.ifNull()),
-          onChanged: (value) => onChanged(SourcePreferenceChange(
-            switchState: value,
-            position: kPositionPlaceholder,
-          )),
+          secondary: isLoading ? const MiniCircularProgressIndicator() : null,
+          onChanged: isLoading
+              ? null
+              : (value) => onChanged(SourcePreferenceChange(
+                    switchState: value,
+                    position: kPositionPlaceholder,
+                  )),
           controlAffinity: ListTileControlAffinity.trailing,
         ),
       ListPreference(
@@ -75,22 +84,26 @@ class SourcePreferenceToWidget extends StatelessWidget {
           key: Key(key),
           title: Text(title ?? ""),
           subtitle: currentValue.isNotBlank ? Text(currentValue!) : null,
-          onTap: () => showDialog(
-            context: context,
-            builder: (context) => RadioListPopup<String>(
-              title: title ?? "",
-              optionList: entryValues.toList(),
-              value: currentValue ?? defaultValue ?? "",
-              onChange: (value) {
-                onChanged(SourcePreferenceChange(
-                  listState: value,
-                  position: kPositionPlaceholder,
-                ));
-                Navigator.pop(context);
-              },
-              getOptionTitle: (entry) => entries[entryValues.indexOf(entry)],
-            ),
-          ),
+          trailing: isLoading ? const MiniCircularProgressIndicator() : null,
+          onTap: isLoading
+              ? null
+              : () => showDialog(
+                    context: context,
+                    builder: (context) => RadioListPopup<String>(
+                      title: title ?? "",
+                      optionList: entryValues.toList(),
+                      value: currentValue ?? defaultValue ?? "",
+                      onChange: (value) {
+                        onChanged(SourcePreferenceChange(
+                          listState: value,
+                          position: kPositionPlaceholder,
+                        ));
+                        Navigator.pop(context);
+                      },
+                      getOptionTitle: (entry) =>
+                          entries[entryValues.indexOf(entry)],
+                    ),
+                  ),
         ),
       MultiSelectListPreference(
         key: String key,
@@ -105,22 +118,28 @@ class SourcePreferenceToWidget extends StatelessWidget {
           key: Key(key),
           title: Text(title ?? ""),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
-          onTap: () => showDialog(
-            context: context,
-            builder: (context) => MultiSelectPopup<String>(
-              title: title ?? "",
-              optionList: entryValues.toList(),
-              values: currentValue?.toList() ?? defaultValue?.toList() ?? [],
-              onChange: (value) {
-                onChanged(SourcePreferenceChange(
-                  multiSelectState: value,
-                  position: kPositionPlaceholder,
-                ));
-                Navigator.pop(context);
-              },
-              getOptionTitle: (entry) => entries[entryValues.indexOf(entry)],
-            ),
-          ),
+          trailing: isLoading ? const MiniCircularProgressIndicator() : null,
+          onTap: isLoading
+              ? null
+              : () => showDialog(
+                    context: context,
+                    builder: (context) => MultiSelectPopup<String>(
+                      title: title ?? "",
+                      optionList: entryValues.toList(),
+                      values: currentValue?.toList() ??
+                          defaultValue?.toList() ??
+                          [],
+                      onChange: (value) {
+                        onChanged(SourcePreferenceChange(
+                          multiSelectState: value,
+                          position: kPositionPlaceholder,
+                        ));
+                        Navigator.pop(context);
+                      },
+                      getOptionTitle: (entry) =>
+                          entries[entryValues.indexOf(entry)],
+                    ),
+                  ),
         ),
       EditTextPreference(
         key: String key,
@@ -135,21 +154,24 @@ class SourcePreferenceToWidget extends StatelessWidget {
           key: Key(key),
           title: Text(title ?? ""),
           subtitle: summary.isNotBlank ? Text(summary!) : null,
-          onTap: () => showDialog(
-            context: context,
-            builder: (context) => TextFieldPopup(
-              title: dialogTitle ?? title ?? "",
-              subtitle: dialogMessage ?? summary ?? "",
-              onChange: (value) async {
-                onChanged(SourcePreferenceChange(
-                  editTextState: value,
-                  position: kPositionPlaceholder,
-                ));
-                Navigator.pop(context);
-              },
-              initialValue: currentValue ?? defaultValue,
-            ),
-          ),
+          trailing: isLoading ? const MiniCircularProgressIndicator() : null,
+          onTap: isLoading
+              ? null
+              : () => showDialog(
+                    context: context,
+                    builder: (context) => TextFieldPopup(
+                      title: dialogTitle ?? title ?? "",
+                      subtitle: dialogMessage ?? summary ?? "",
+                      onChange: (value) async {
+                        onChanged(SourcePreferenceChange(
+                          editTextState: value,
+                          position: kPositionPlaceholder,
+                        ));
+                        Navigator.pop(context);
+                      },
+                      initialValue: currentValue ?? defaultValue,
+                    ),
+                  ),
         ),
       SourcePreference() => throw UnimplementedError(
           'Unhandled preference type: ${prop.runtimeType}'),

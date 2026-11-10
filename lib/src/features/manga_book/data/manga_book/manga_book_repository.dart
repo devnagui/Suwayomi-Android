@@ -53,12 +53,13 @@ class MangaBookRepository {
       )
       .getData((data) => data.updateManga?.manga);
 
-  Future<void> modifyBulkChapters(ChapterBatch batch) =>
-      client.mutate$UpdateChapters(
+  Future<List<ChapterDto>?> modifyBulkChapters(ChapterBatch batch) => client
+      .mutate$UpdateChapters(
         Options$Mutation$UpdateChapters(
           variables: Variables$Mutation$UpdateChapters(input: batch),
         ),
-      );
+      )
+      .getData((data) => data.updateChapters?.chapters);
 
   Future<void> deleteChapters(List<int> chapterIds) =>
       client.mutate$DeleteDownloadedChapters(
@@ -177,20 +178,22 @@ class MangaBookRepository {
     }
   }
 
-  Future<void> putChapter({
+  Future<ChapterDto?> putChapter({
     required int chapterId,
     required ChapterChange patch,
-  }) async =>
-      client.mutate$UpdateChapter(
-        Options$Mutation$UpdateChapter(
-          variables: Variables$Mutation$UpdateChapter(
-            input: Input$UpdateChapterInput(
-              id: chapterId,
-              patch: patch,
+  }) =>
+      client
+          .mutate$UpdateChapter(
+            Options$Mutation$UpdateChapter(
+              variables: Variables$Mutation$UpdateChapter(
+                input: Input$UpdateChapterInput(
+                  id: chapterId,
+                  patch: patch,
+                ),
+              ),
             ),
-          ),
-        ),
-      );
+          )
+          .getData((data) => data.updateChapter?.chapter);
 
   Future<void> patchMangaMeta({
     required int mangaId,

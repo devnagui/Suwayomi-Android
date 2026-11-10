@@ -1,7 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
 import '../../../domain/downloads/graphql/__generated__/fragment.graphql.dart';
@@ -49,10 +48,20 @@ class DownloadsMap extends _$DownloadsMap {
 
   @override
   Map<int, DownloadDto> build() {
-    ref.listen(downloadUpdatesProvider,
-        (_, next) => updateDownloadStatus(next.valueOrNull));
-    final downloadStatusDto = ref.watch(downloadStatusProvider).valueOrNull;
-    return getStateFromUpdates(downloadStatusDto);
+    ref.listen(
+      downloadUpdatesProvider,
+      (_, next) => updateDownloadStatus(next.valueOrNull),
+    );
+    ref.listen(
+      downloadStatusProvider,
+      (_, next) {
+        final downloadStatus = next.valueOrNull;
+        if (downloadStatus != null) {
+          state = getStateFromUpdates(downloadStatus);
+        }
+      },
+    );
+    return getStateFromUpdates(ref.read(downloadStatusProvider).valueOrNull);
   }
 
   Map<int, DownloadDto> getStateFromUpdates(
@@ -64,11 +73,17 @@ class DownloadsMap extends _$DownloadsMap {
     return downloadsMap;
   }
 
-  void reorder(int chapterId, int to) async {
+  Future<void> reorder(int chapterId, int to) async {
     final downloadStatusDto = await ref
         .read(downloadsRepositoryProvider)
         .reorderDownload(chapterId, to);
     state = getStateFromUpdates(downloadStatusDto);
+  }
+
+  Future<void> refresh() async {
+    ref.invalidate(downloadStatusProvider);
+    final downloadStatus = await ref.read(downloadStatusProvider.future);
+    state = getStateFromUpdates(downloadStatus);
   }
 }
 
@@ -85,18 +100,30 @@ List<int> downloadsChapterIds(Ref ref) {
 
 @riverpod
 AsyncValue<DownloaderState?> downloaderState(Ref ref) {
-  return ref.watch(downloadUpdatesProvider
-      .select((value) => value.copyWithData((data) => data?.state)));
+  final subscription = ref.watch(downloadUpdatesProvider);
+  final subscriptionState = subscription.valueOrNull?.state;
+  if (subscriptionState != null) {
+    return AsyncData(subscriptionState);
+  }
+
+  final httpStatus = ref.watch(downloadStatusProvider);
+  final httpState = httpStatus.valueOrNull?.state;
+  if (httpState != null) {
+    return AsyncData(httpState);
+  }
+  if (httpStatus.hasError) {
+    return AsyncError(httpStatus.error!, httpStatus.stackTrace!);
+  }
+  return const AsyncLoading();
 }
 
 @riverpod
 bool showDownloadsFAB(Ref ref) {
-  final downloads = ref.watch(downloadUpdatesProvider);
-  return downloads.valueOrNull?.state == DownloaderState.STARTED ||
-      (downloads.valueOrNull?.updates).isNotBlank &&
-          downloads.valueOrNull!.updates.any(
-            (element) =>
-                element.download.state != DownloadState.ERROR ||
-                element.download.tries != 3,
-          );
+  final downloaderState = ref.watch(downloaderStateProvider).valueOrNull;
+  final downloads = ref.watch(downloadsMapProvider).values;
+  return downloaderState == DownloaderState.STARTED ||
+      downloads.any(
+        (download) =>
+            download.state != DownloadState.ERROR || download.tries != 3,
+      );
 }

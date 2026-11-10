@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -19,7 +20,7 @@ class HistoryGroupWidget extends StatelessWidget {
   });
 
   final HistoryGroup group;
-  final Function(int chapterId) onRemoveItem;
+  final AsyncValueSetter<int> onRemoveItem;
 
   @override
   Widget build(BuildContext context) {

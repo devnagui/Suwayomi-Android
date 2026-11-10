@@ -22,11 +22,13 @@ class OperationLog extends ValueNotifier<List<String>> {
     int? httpStatus,
     String? errorType,
     AuthIssue? authIssue,
+    String? action,
   }) {
     final entry = [
       DateTime.now().toUtc().toIso8601String(),
       operation,
       outcome,
+      if (action != null) 'action=$action',
       if (id != null) 'id=$id',
       if (mangaId != null) 'mangaId=$mangaId',
       if (chapterId != null) 'chapterId=$chapterId',

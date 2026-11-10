@@ -5,12 +5,16 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/logger/operation_log.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/async_buttons/async_icon_button.dart';
+import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
@@ -29,30 +33,90 @@ class DownloadProgressListTile extends HookConsumerWidget {
   final int index;
   final int downloadsCount;
 
-  Future toggleChapterToQueue(
+  Future<void> toggleChapterToQueue(
     Toast? toast,
     WidgetRef ref,
     bool addToDownload,
     int chapterId,
   ) async {
-    try {
-      (await AsyncValue.guard(() async {
-        final repo = ref.read(downloadsRepositoryProvider);
-        await repo.removeChapterFromDownloadQueue(chapterId);
-        if (addToDownload) {
-          await repo.addChaptersBatchToDownloadQueue([chapterId]);
-        }
-      }))
-          .showToastOnError(toast);
-    } catch (e) {
-      //
+    OperationLog.instance.record(
+      'DownloadUiAction',
+      outcome: 'triggered',
+      action: addToDownload ? 'retry_queue_item' : 'remove_queue_item',
+      chapterId: chapterId,
+    );
+    final result = await AsyncValue.guard(() async {
+      final repo = ref.read(downloadsRepositoryProvider);
+      await repo.removeChapterFromDownloadQueue(chapterId);
+      if (addToDownload) {
+        await repo.addChaptersBatchToDownloadQueue([chapterId]);
+      }
+    });
+    result.showToastOnError(toast);
+    if (!result.hasError) {
+      await AsyncValue.guard(
+        ref.read(downloadsMapProvider.notifier).refresh,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isMutating = useState(false);
     final downloadUpdate = ref.watch(downloadsFromIdProvider(chapterId));
     if (downloadUpdate == null) return const SizedBox.shrink();
+
+    Future<void> reorder(int position) async {
+      if (isMutating.value) return;
+      isMutating.value = true;
+      try {
+        final result = await AsyncValue.guard(
+          () => ref
+              .read(downloadsMapProvider.notifier)
+              .reorder(downloadUpdate.chapter.id, position),
+        );
+        if (context.mounted) result.showToastOnError(toast);
+      } finally {
+        if (context.mounted) isMutating.value = false;
+      }
+    }
+
+    Future<void> mutate(bool retry) async {
+      if (isMutating.value) return;
+      isMutating.value = true;
+      try {
+        await toggleChapterToQueue(
+          toast,
+          ref,
+          retry,
+          downloadUpdate.chapter.id,
+        );
+      } finally {
+        if (context.mounted) isMutating.value = false;
+      }
+    }
+
+    Future<void> confirmRemoval() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(dialogContext.l10n.delete),
+          content: Text(downloadUpdate.chapter.name),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(dialogContext.l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(dialogContext.l10n.delete),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && context.mounted) await mutate(false);
+    }
+
     return Card(
       margin: KEdgeInsets.h16v4.size,
       child: Padding(
@@ -105,25 +169,18 @@ class DownloadProgressListTile extends HookConsumerWidget {
                     ),
                     Row(
                       children: [
-                        IconButton(
+                        AsyncIconButton(
                           visualDensity: VisualDensity.compact,
-                          onPressed: index.isZero
-                              ? null
-                              : () => ref
-                                  .read(downloadsMapProvider.notifier)
-                                  .reorder(
-                                      downloadUpdate.chapter.id, index - 1),
+                          onPressed:
+                              index.isZero ? null : () => reorder(index - 1),
                           icon: const Icon(Icons.arrow_drop_up_rounded),
                           color: Colors.grey,
                         ),
-                        IconButton(
+                        AsyncIconButton(
                           visualDensity: VisualDensity.compact,
                           onPressed: index >= downloadsCount - 1
                               ? null
-                              : () => ref
-                                  .read(downloadsMapProvider.notifier)
-                                  .reorder(
-                                      downloadUpdate.chapter.id, index + 1),
+                              : () => reorder(index + 1),
                           icon: const Icon(Icons.arrow_drop_down_rounded),
                           color: Colors.grey,
                         ),
@@ -133,38 +190,35 @@ class DownloadProgressListTile extends HookConsumerWidget {
                 ),
               ),
             ),
-            PopupMenuButton(
-              shape: RoundedRectangleBorder(
-                borderRadius: KBorderRadius.r16.radius,
-              ),
-              itemBuilder: (context) => [
-                if (downloadUpdate.state == DownloadState.ERROR)
-                  PopupMenuItem(
-                    child: Text(context.l10n.retry),
-                    onTap: () => toggleChapterToQueue(
-                        toast, ref, true, downloadUpdate.chapter.id),
-                  ),
-                PopupMenuItem(
-                  child: Text(context.l10n.delete),
-                  onTap: () => toggleChapterToQueue(
-                      toast, ref, false, downloadUpdate.chapter.id),
+            if (isMutating.value)
+              const MiniCircularProgressIndicator()
+            else
+              PopupMenuButton(
+                shape: RoundedRectangleBorder(
+                  borderRadius: KBorderRadius.r16.radius,
                 ),
-                if (!index.isZero)
+                itemBuilder: (context) => [
+                  if (downloadUpdate.state == DownloadState.ERROR)
+                    PopupMenuItem(
+                      child: Text(context.l10n.retry),
+                      onTap: () => mutate(true),
+                    ),
                   PopupMenuItem(
-                    child: Text(context.l10n.moveToTop),
-                    onTap: () => ref
-                        .read(downloadsMapProvider.notifier)
-                        .reorder(downloadUpdate.chapter.id, 0),
+                    onTap: confirmRemoval,
+                    child: Text(context.l10n.delete),
                   ),
-                if (index < downloadsCount - 1)
-                  PopupMenuItem(
-                    child: Text(context.l10n.moveToBottom),
-                    onTap: () => ref
-                        .read(downloadsMapProvider.notifier)
-                        .reorder(downloadUpdate.chapter.id, downloadsCount - 1),
-                  ),
-              ],
-            ),
+                  if (!index.isZero)
+                    PopupMenuItem(
+                      child: Text(context.l10n.moveToTop),
+                      onTap: () => reorder(0),
+                    ),
+                  if (index < downloadsCount - 1)
+                    PopupMenuItem(
+                      child: Text(context.l10n.moveToBottom),
+                      onTap: () => reorder(downloadsCount - 1),
+                    ),
+                ],
+              ),
           ],
         ),
       ),

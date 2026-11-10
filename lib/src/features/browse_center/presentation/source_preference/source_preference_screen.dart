@@ -5,9 +5,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../source_manga_list/controller/source_manga_controller.dart';
 import 'controller/source_preference_controller.dart';
@@ -24,6 +26,7 @@ class SourcePreferenceScreen extends HookConsumerWidget {
     final preferenceProvider = baseSourcePreferenceListProvider(sourceId);
     final networkPreferences = ref.watch(preferenceProvider);
     final preferences = networkPreferences.valueOrNull;
+    final savingPreferences = useState(<int>{});
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -42,14 +45,33 @@ class SourcePreferenceScreen extends HookConsumerWidget {
                 "Source-preference-$index",
               ),
               sourcePreference: sourcePreference,
+              isLoading: savingPreferences.value.contains(index),
               onChanged: (value) async {
-                await ref
-                    .read(sourceRepositoryProvider)
-                    .updateSourcePreferenceById(
-                      sourceId,
-                      value.copyWith(position: index),
-                    );
-                ref.invalidate(preferenceProvider);
+                if (savingPreferences.value.contains(index)) return;
+                savingPreferences.value = {
+                  ...savingPreferences.value,
+                  index,
+                };
+                try {
+                  final result = await AsyncValue.guard(
+                    () => ref
+                        .read(sourceRepositoryProvider)
+                        .updateSourcePreferenceById(
+                          sourceId,
+                          value.copyWith(position: index),
+                        ),
+                  );
+                  if (context.mounted) {
+                    result.showToastOnError(ref.read(toastProvider));
+                    if (!result.hasError) ref.invalidate(preferenceProvider);
+                  }
+                } finally {
+                  if (context.mounted) {
+                    savingPreferences.value = {
+                      ...savingPreferences.value,
+                    }..remove(index);
+                  }
+                }
               },
             );
           },

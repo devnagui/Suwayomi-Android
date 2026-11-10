@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/async_buttons/async_icon_button.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 
@@ -29,19 +30,24 @@ class SingleChapterActionIcon extends ConsumerWidget {
   final ImageIcon? imageIcon;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
+    return AsyncIconButton(
       icon: imageIcon ?? Icon(icon),
       onPressed: () async {
-        final result = (await AsyncValue.guard(
-          () => ref.read(mangaBookRepositoryProvider).putChapter(
-                chapterId: chapterId,
-                patch: change,
-              ),
-        ));
+        final result = await AsyncValue.guard(() async {
+          final chapter =
+              await ref.read(mangaBookRepositoryProvider).putChapter(
+                    chapterId: chapterId,
+                    patch: change,
+                  );
+          if (chapter == null) {
+            throw StateError('Chapter update returned no data');
+          }
+          return chapter;
+        });
         if (context.mounted) {
           result.showToastOnError(ref.read(toastProvider));
         }
-        await refresh();
+        if (result.valueOrNull != null) await refresh();
       },
     );
   }

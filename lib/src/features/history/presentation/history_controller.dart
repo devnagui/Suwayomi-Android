@@ -67,39 +67,23 @@ class ReadingHistory extends _$ReadingHistory {
 
   /// Remove a chapter from reading history
   Future<void> removeFromHistory(int chapterId) async {
-    state = await AsyncValue.guard(() async {
-      // First get the chapter to extract mangaId for cache invalidation
-      final currentItems = state.valueOrNull ?? [];
-      HistoryItemDto? chapterToRemove;
+    final currentItems = state.valueOrNull ?? [];
+    final chapterToRemove =
+        currentItems.where((item) => item.id == chapterId).firstOrNull;
 
-      try {
-        chapterToRemove =
-            currentItems.firstWhere((item) => item.id == chapterId);
-      } catch (e) {
-        // Chapter not found in current list, continue anyway
-      }
+    await ref
+        .read(historyRepositoryProvider)
+        .removeChapterFromHistory(chapterId);
 
-      // Remove the chapter from history on the server
-      await ref
-          .read(historyRepositoryProvider)
-          .removeChapterFromHistory(chapterId);
-
-      // Invalidate all related caches to ensure fresh data
-      if (chapterToRemove != null) {
-        final mangaId = chapterToRemove.mangaId;
-        // Invalidate the specific manga's chapter list so it shows as unread immediately
-        ref.invalidate(mangaChapterListProvider(mangaId: mangaId));
-        ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
-      }
-
-      // Also invalidate the history provider itself to force a fresh query
-      ref.invalidateSelf();
-
-      // Refresh the history data from server to get updated state
-      final result =
-          await ref.read(historyRepositoryProvider).getReadingHistory();
-      return result?.nodes;
-    });
+    final latestItems = state.valueOrNull ?? currentItems;
+    state = AsyncData(
+      latestItems.where((item) => item.id != chapterId).toList(),
+    );
+    if (chapterToRemove != null) {
+      final mangaId = chapterToRemove.mangaId;
+      ref.invalidate(mangaChapterListProvider(mangaId: mangaId));
+      ref.invalidate(mangaWithIdProvider(mangaId: mangaId));
+    }
   }
 }
 

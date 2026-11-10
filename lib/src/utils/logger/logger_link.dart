@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:gql/ast.dart';
 import 'package:graphql/client.dart';
 
 import 'auth_diagnostics.dart';
@@ -19,10 +20,17 @@ class LoggerLink extends Link {
     if (forward == null) {
       throw StateError('LoggerLink requires a following link');
     }
-    final operation = request.operation.operationName ?? 'AnonymousOperation';
+    final operation = request.operation.operationName ??
+        request.operation.document.definitions
+            .whereType<OperationDefinitionNode>()
+            .firstOrNull
+            ?.name
+            ?.value ??
+        'AnonymousOperation';
     final input = request.variables['input'];
     final inputMap =
         input is Map<String, dynamic> ? input : const <String, dynamic>{};
+    final ids = request.variables['ids'] ?? inputMap['ids'];
     final id = request.variables['id'] ?? inputMap['id'];
     final mangaId = request.variables['mangaId'] ?? inputMap['mangaId'];
     final chapterId = request.variables['chapterId'] ?? inputMap['chapterId'];
@@ -33,6 +41,7 @@ class LoggerLink extends Link {
       id: id is int ? id : null,
       mangaId: mangaId is int ? mangaId : null,
       chapterId: chapterId is int ? chapterId : null,
+      count: ids is List ? ids.length : null,
     );
     return forward(request).transform(
       StreamTransformer<Response, Response>.fromHandlers(

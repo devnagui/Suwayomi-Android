@@ -60,7 +60,7 @@ enum DBKeys {
   historyEnabled(true),
   historyRetentionDays(90),
   // Timeout Settings
-  serverRequestTimeout(15000), // milliseconds
+  serverRequestTimeout(60000), // milliseconds
   autoRefreshOnTimeout(false),
   autoRefreshRetryDelay(1000), // milliseconds
   ;

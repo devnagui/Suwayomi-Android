@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/file_picker_utils.dart';
 import '../../../../../../utils/misc/toast/toast.dart';
+import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/section_title.dart';
 import '../../../../domain/settings/settings.dart';
 import '../../data/backup_settings_repository.dart';
@@ -71,6 +72,25 @@ class BackupAndRestoreSection extends HookConsumerWidget {
             BackupMissingDialog(backupMissing: validateResult.valueOrNull!),
       ))
           .ifNull();
+    } else if (context.mounted) {
+      restoreBackup = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: Text(dialogContext.l10n.restoreBackupTitle),
+              content: Text(dialogContext.l10n.restoreBackupDescription),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: Text(dialogContext.l10n.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: Text(dialogContext.l10n.restore),
+                ),
+              ],
+            ),
+          ) ??
+          false;
     }
 
     if (restoreBackup) {
@@ -103,6 +123,7 @@ class BackupAndRestoreSection extends HookConsumerWidget {
   @override
   Widget build(context, ref) {
     final restoreId = useState<String?>(null);
+    final isStartingRestore = useState(false);
     final toast = ref.watch(toastProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,26 +144,37 @@ class BackupAndRestoreSection extends HookConsumerWidget {
           title: Text(context.l10n.restoreBackupTitle),
           subtitle: Text(context.l10n.restoreBackupDescription),
           leading: const Icon(Icons.restore_rounded),
-          trailing: restoreId.value != null
-              ? RestoreStatusProgress(
-                  restoreRequestId: restoreId.value!,
-                  onCompleted: (state) {
-                    if (state == RestoreState.FAILURE) {
-                      toast?.showError(context.l10n.errorBackupRestore,
-                          withMicrotask: true);
-                    } else {
-                      toast?.show(
-                        context.l10n.restored,
-                        withMicrotask: true,
-                        instantShow: true,
-                      );
-                    }
-                    restoreId.value = null;
-                  },
-                )
-              : null,
-          onTap: () async =>
-              restoreId.value = await backupFilePicker(ref, context),
+          trailing: isStartingRestore.value
+              ? const MiniCircularProgressIndicator()
+              : restoreId.value != null
+                  ? RestoreStatusProgress(
+                      restoreRequestId: restoreId.value!,
+                      onCompleted: (state) {
+                        if (state == RestoreState.FAILURE) {
+                          toast?.showError(context.l10n.errorBackupRestore,
+                              withMicrotask: true);
+                        } else {
+                          toast?.show(
+                            context.l10n.restored,
+                            withMicrotask: true,
+                            instantShow: true,
+                          );
+                        }
+                        restoreId.value = null;
+                      },
+                    )
+                  : null,
+          enabled: !isStartingRestore.value && restoreId.value == null,
+          onTap: isStartingRestore.value || restoreId.value != null
+              ? null
+              : () async {
+                  isStartingRestore.value = true;
+                  try {
+                    restoreId.value = await backupFilePicker(ref, context);
+                  } finally {
+                    if (context.mounted) isStartingRestore.value = false;
+                  }
+                },
         ),
         const Gap(8),
       ],

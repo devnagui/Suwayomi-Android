@@ -9,6 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../widgets/async_buttons/async_checkbox_list_tile.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../library/domain/category/category_model.dart';
@@ -63,7 +64,7 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                             if (category.id != 0)
                               AsyncCheckboxListTile(
                                 onChanged: (value) async {
-                                  await AsyncValue.guard(
+                                  final result = await AsyncValue.guard(
                                     () => value.ifNull()
                                         ? ref
                                             .read(mangaBookRepositoryProvider)
@@ -74,8 +75,16 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                                             .removeMangaFromCategory(
                                                 mangaId, category.id),
                                   );
-                                  ref.read(provider.notifier).refresh();
-                                  ref.invalidate(categoryControllerProvider);
+                                  if (context.mounted) {
+                                    result.showToastOnError(
+                                      ref.read(toastProvider),
+                                    );
+                                  }
+                                  if (!result.hasError) {
+                                    ref.read(provider.notifier).refresh();
+                                    ref.invalidate(categoryControllerProvider);
+                                  }
+                                  return !result.hasError;
                                 },
                                 value: selectedCategoryList?.containsKey(
                                       "${category.id}",

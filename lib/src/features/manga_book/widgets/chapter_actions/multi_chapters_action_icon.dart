@@ -10,7 +10,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/async_buttons/async_icon_button.dart';
 import '../../data/manga_book/manga_book_repository.dart';
+import '../../domain/chapter/chapter_model.dart';
 import '../../domain/chapter_batch/chapter_batch_model.dart';
 
 class MultiChaptersActionIcon extends ConsumerWidget {
@@ -18,32 +20,40 @@ class MultiChaptersActionIcon extends ConsumerWidget {
     this.iconData,
     required this.chapterList,
     required this.change,
-    required this.refresh,
+    required this.onUpdated,
     this.icon,
     super.key,
   });
   final List<int> chapterList;
   final ChapterChange change;
-  final AsyncValueSetter<bool> refresh;
+  final AsyncValueSetter<List<ChapterDto>> onUpdated;
   final IconData? iconData;
   final Widget? icon;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
+    return AsyncIconButton(
       icon: icon ?? Icon(iconData),
       onPressed: () async {
         final result = await AsyncValue.guard(
-          () => ref.read(mangaBookRepositoryProvider).modifyBulkChapters(
-                ChapterBatch(
-                  ids: chapterList,
-                  patch: change,
-                ),
-              ),
+          () async {
+            final chapters =
+                await ref.read(mangaBookRepositoryProvider).modifyBulkChapters(
+                      ChapterBatch(
+                        ids: chapterList,
+                        patch: change,
+                      ),
+                    );
+            if (chapters == null) {
+              throw StateError('Chapter update returned no data');
+            }
+            return chapters;
+          },
         );
         if (context.mounted) {
           result.showToastOnError(ref.read(toastProvider));
         }
-        await refresh(true);
+        final chapters = result.valueOrNull;
+        if (chapters != null) await onUpdated(chapters);
       },
     );
   }

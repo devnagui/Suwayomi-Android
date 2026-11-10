@@ -27,12 +27,14 @@ class SourceMangaGridView extends ConsumerWidget {
     required this.sourceId,
     required this.sourceType,
     this.source,
+    required this.pendingMangaIds,
   });
   final Future<AsyncValue?> Function(MangaDto) toggleFavorite;
   final PagingController<int, MangaDto> controller;
   final SourceDto? source;
   final String sourceId;
   final SourceType sourceType;
+  final Set<int> pendingMangaIds;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,18 +61,21 @@ class SourceMangaGridView extends ConsumerWidget {
         ),
         itemBuilder: (context, item, index) => MangaCoverGridTile(
           manga: item,
+          isLoading: pendingMangaIds.contains(item.id),
           showDarkOverlay: item.inLibrary.ifNull(),
-          onLongPress: () async {
-            final value = await toggleFavorite(item);
-            if (value == null) return;
-            if (value is! AsyncError) {
-              final items = [...?controller.itemList];
-              items[index] = item.copyWith(
-                user: item.user.copyWith(inLibrary: !item.inLibrary),
-              );
-              controller.itemList = items;
-            }
-          },
+          onLongPress: pendingMangaIds.contains(item.id)
+              ? null
+              : () async {
+                  final value = await toggleFavorite(item);
+                  if (value == null) return;
+                  if (value is! AsyncError) {
+                    final items = [...?controller.itemList];
+                    items[index] = item.copyWith(
+                      user: item.user.copyWith(inLibrary: !item.inLibrary),
+                    );
+                    controller.itemList = items;
+                  }
+                },
           onPressed: () => MangaRoute(mangaId: item.id).push(context),
         ),
       ),

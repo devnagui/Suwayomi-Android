@@ -23,50 +23,64 @@ class DownloadsRepository {
   final GraphQLClient client;
   final GraphQLClient subscriptionClient;
   // Downloads
-  Future<void> startDownloads() => client.mutate$StartDownloader(
+  Future<void> startDownloads() => client
+      .mutate$StartDownloader(
         Options$Mutation$StartDownloader(
+          operationName: 'StartDownloader',
           variables: Variables$Mutation$StartDownloader(
             input: Input$StartDownloaderInput(),
           ),
         ),
-      );
+      )
+      .getData<void>((_) {});
 
-  Future<void> stopDownloads() => client.mutate$StopDownloader(
+  Future<void> stopDownloads() => client
+      .mutate$StopDownloader(
         Options$Mutation$StopDownloader(
+          operationName: 'StopDownloader',
           variables: Variables$Mutation$StopDownloader(
             input: Input$StopDownloaderInput(),
           ),
         ),
-      );
-  Future<void> clearDownloads() => client.mutate$ClearDownloader(
+      )
+      .getData<void>((_) {});
+  Future<void> clearDownloads() => client
+      .mutate$ClearDownloader(
         Options$Mutation$ClearDownloader(
+          operationName: 'ClearDownloader',
           variables: Variables$Mutation$ClearDownloader(
             input: Input$ClearDownloaderInput(),
           ),
         ),
-      );
+      )
+      .getData<void>((_) {});
 
-  Future<void> addChaptersBatchToDownloadQueue(List<int> chapterIds) =>
-      client.mutate$EnqueueChapterDownloads(
+  Future<void> addChaptersBatchToDownloadQueue(List<int> chapterIds) => client
+      .mutate$EnqueueChapterDownloads(
         Options$Mutation$EnqueueChapterDownloads(
+          operationName: 'EnqueueChapterDownloads',
           variables: Variables$Mutation$EnqueueChapterDownloads(
             input: Input$EnqueueChapterDownloadsInput(ids: chapterIds),
           ),
         ),
-      );
+      )
+      .getData<void>((_) {});
 
-  Future<void> removeChapterFromDownloadQueue(int chapterId) =>
-      client.mutate$DequeueChapterDownloads(
+  Future<void> removeChapterFromDownloadQueue(int chapterId) => client
+      .mutate$DequeueChapterDownloads(
         Options$Mutation$DequeueChapterDownloads(
+          operationName: 'DequeueChapterDownloads',
           variables: Variables$Mutation$DequeueChapterDownloads(
             input: Input$DequeueChapterDownloadInput(id: chapterId),
           ),
         ),
-      );
+      )
+      .getData<void>((_) {});
 
   Future<DownloadStatusDto?> reorderDownload(int chapterId, int to) => client
       .mutate$ReorderChapterDownload(
         Options$Mutation$ReorderChapterDownload(
+          operationName: 'ReorderChapterDownload',
           variables: Variables$Mutation$ReorderChapterDownload(
             input: Input$ReorderChapterDownloadInput(
               chapterId: chapterId,
@@ -80,6 +94,7 @@ class DownloadsRepository {
   Stream<DownloadUpdatesDto?> downloadStatusSubscription() => subscriptionClient
       .subscribe$DownloadStatusChanged(
         Options$Subscription$DownloadStatusChanged(
+          operationName: 'DownloadStatusChanged',
           variables: Variables$Subscription$DownloadStatusChanged(
             input: Input$DownloadChangedInput(maxUpdates: 150),
           ),
@@ -87,8 +102,14 @@ class DownloadsRepository {
       )
       .getData((data) => data.downloadStatusChanged);
 
-  Future<DownloadStatusDto?> getDownloadStatus() =>
-      client.query$GetDownloadStatus().getData((data) => data.downloadStatus);
+  Future<DownloadStatusDto?> getDownloadStatus() => client
+      .query$GetDownloadStatus(
+        Options$Query$GetDownloadStatus(
+          operationName: 'GetDownloadStatus',
+          fetchPolicy: FetchPolicy.networkOnly,
+        ),
+      )
+      .getData((data) => data.downloadStatus);
 }
 
 @riverpod

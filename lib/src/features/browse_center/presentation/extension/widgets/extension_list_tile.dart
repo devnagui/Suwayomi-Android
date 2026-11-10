@@ -95,15 +95,54 @@ class ExtensionListTileTailing extends StatelessWidget {
   final WidgetRef ref;
   final AsyncCallback refresh;
 
+  Future<bool> confirmUninstall(BuildContext context) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(dialogContext.l10n.deleteCategoryTitle),
+          content: Text(extension.name),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(dialogContext.l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(dialogContext.l10n.uninstall),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
   @override
   Widget build(BuildContext context) {
     if (extension.isObsolete.ifNull()) {
       return OutlinedButton(
-        onPressed: extension.isInstalled.ifNull()
-            ? () => repository.uninstallExtension(extension.pkgName)
+        onPressed: extension.isInstalled.ifNull() && !isLoading.value
+            ? () async {
+                if (!await confirmUninstall(context) || !context.mounted) {
+                  return;
+                }
+                isLoading.value = true;
+                try {
+                  await AppUtils.guard(
+                    () async {
+                      if (extension.pkgName.isBlank) {
+                        throw context.l10n.errorExtension;
+                      }
+                      await repository.uninstallExtension(extension.pkgName);
+                      await refresh();
+                    },
+                    ref.read(toastProvider),
+                  );
+                } finally {
+                  isLoading.value = false;
+                }
+              }
             : null,
         child: Text(
-          context.l10n.obsolete,
+          isLoading.value ? context.l10n.uninstalling : context.l10n.obsolete,
           style: const TextStyle(color: Colors.redAccent),
         ),
       );
@@ -112,8 +151,12 @@ class ExtensionListTileTailing extends StatelessWidget {
         return TextButton(
           onPressed: (!isLoading.value)
               ? () async {
+                  if (!extension.hasUpdate.ifNull() &&
+                      (!await confirmUninstall(context) || !context.mounted)) {
+                    return;
+                  }
+                  isLoading.value = (true);
                   try {
-                    isLoading.value = (true);
                     await AppUtils.guard(
                       () async {
                         if (extension.pkgName.isBlank) {
@@ -130,9 +173,8 @@ class ExtensionListTileTailing extends StatelessWidget {
                       },
                       ref.read(toastProvider),
                     );
+                  } finally {
                     isLoading.value = (false);
-                  } catch (e) {
-                    //
                   }
                 }
               : null,
@@ -150,8 +192,8 @@ class ExtensionListTileTailing extends StatelessWidget {
         return TextButton(
           onPressed: !isLoading.value
               ? () async {
+                  isLoading.value = (true);
                   try {
-                    isLoading.value = (true);
                     await AppUtils.guard(() async {
                       if (extension.pkgName.isBlank) {
                         throw context.l10n.errorExtension;
@@ -172,9 +214,8 @@ class ExtensionListTileTailing extends StatelessWidget {
                       }
                       await refresh();
                     }, ref.read(toastProvider));
+                  } finally {
                     isLoading.value = (false);
-                  } catch (e) {
-                    //
                   }
                 }
               : null,
