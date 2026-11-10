@@ -187,10 +187,10 @@ void main() {
     expect(requests, 0);
     expect(await mutationCache.get('chapter_10'), isNull);
     expect(await mutationCache.get('chapter_20'), isNotNull);
-    expect(store.toMap(), isEmpty);
+    expect(store.toMap(), hasLength(2));
   });
 
-  test('cleared phantom references stay removed after reopening Hive',
+  test('forget persists recovery cleanup without clearing graph cache',
       () async {
     final path = p.join(directory.path, 'graphql-cache');
     await Directory(path).create();
@@ -218,7 +218,7 @@ void main() {
     addTearDown(() async {
       if (reopened.box.isOpen) await reopened.box.close();
     });
-    expect(reopened.toMap(), isEmpty);
+    expect(reopened.toMap(), contains('MangaType:37'));
     await reopened.box.close();
   });
 
@@ -233,7 +233,10 @@ void main() {
     await saved.parent.create(recursive: true);
     await saved.writeAsString('saved');
     final repo = repository(Link.function((request, [forward]) async* {
-      throw StateError('No network needed');
+      yield Response(
+        response: const {},
+        data: const {'__typename': 'Query'},
+      );
     }));
     expect(await repo.clearLocalCache(), 1);
     expect(await corrupt.exists(), isFalse);
@@ -242,11 +245,47 @@ void main() {
     expect(store.toMap(), isEmpty);
   });
 
+  test('clear preserves every cache when the server is unavailable', () async {
+    await seedChapters();
+    var imagesCleared = false;
+    final repo = LocalCacheRepository(
+      GraphQLClient(
+        link: Link.function((request, [forward]) {
+          return Stream.error(NetworkException.fromException(
+            originalException: const SocketException('offline'),
+            originalStackTrace: StackTrace.empty,
+            uri: null,
+          ));
+        }),
+        cache: GraphQLCache(store: store),
+      ),
+      mutationCache,
+      clearImages: () async => imagesCleared = true,
+      operationLog: log,
+    );
+    final mutationBefore = await mutationCache.entries();
+    final graphBefore = store.toMap();
+
+    await expectLater(
+      repo.clearLocalCache(),
+      throwsA(isA<OperationMessageException>()),
+    );
+
+    expect(await mutationCache.entries(), mutationBefore);
+    expect(store.toMap(), graphBefore);
+    expect(imagesCleared, isFalse);
+  });
+
   test('concurrent cache operations are rejected explicitly', () async {
     final images = Completer<void>();
     final repo = LocalCacheRepository(
       GraphQLClient(
-        link: Link.function((request, [forward]) async* {}),
+        link: Link.function((request, [forward]) async* {
+          yield Response(
+            response: const {},
+            data: const {'__typename': 'Query'},
+          );
+        }),
         cache: GraphQLCache(store: store),
       ),
       mutationCache,

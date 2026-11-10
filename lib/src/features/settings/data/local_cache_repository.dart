@@ -42,6 +42,29 @@ class LocalCacheRepository {
     }
   }
 
+  Future<void> _ensureServerAvailable() async {
+    final result = await client.query(
+      QueryOptions<Object?>(
+        document: gql('query CacheClearReady { __typename }'),
+        fetchPolicy: FetchPolicy.noCache,
+      ),
+    );
+    final exception = result.exception;
+    if (exception != null) {
+      operationLog.record(
+        'CacheClearReady',
+        outcome: 'failed',
+        errorType:
+            exception.linkException?.runtimeType.toString() ?? 'GraphQLError',
+        errorCount: exception.graphqlErrors.length,
+      );
+      throw OperationMessageException(exception);
+    }
+    if (result.data?['__typename'] != 'Query') {
+      throw StateError('The server did not confirm cache reload availability');
+    }
+  }
+
   Future<int> _run(String operation, Future<int> Function() action) async {
     if (_busy) throw StateError('A local cache operation is already running');
     _busy = true;
@@ -65,6 +88,7 @@ class LocalCacheRepository {
   }
 
   Future<int> clearLocalCache() => _run('ClearLocalCache', () async {
+        await _ensureServerAvailable();
         final removed = await mutationCache.clear();
         await _clearQueryCache();
         await clearImages();
@@ -75,7 +99,6 @@ class LocalCacheRepository {
     if (mangaId < 0) throw ArgumentError.value(mangaId, 'mangaId');
     return _run('ForgetLocalManga', () async {
       await mutationCache.removeMangas({mangaId});
-      await _clearQueryCache();
       return 1;
     });
   }

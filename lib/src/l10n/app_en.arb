@@ -1342,7 +1342,7 @@
     "localMangaLinksRemoved": "Removed {count} missing local manga links.",
     "@localMangaLinksRemoved": {"placeholders": {"count": {"type": "int"}}},
     "forgetLocalManga": "Forget local manga",
-    "forgetLocalMangaDescription": "Clear cached library and manga queries and remove this manga's cached chapter metadata on this device only. Server data and saved page files are kept. Reconnect to reload manga metadata. If the manga still exists on the server, it may appear again.",
+    "forgetLocalMangaDescription": "Remove this manga's cached recovery metadata on this device only. The rest of the cached library, server data and saved page files are kept. Reconnect to reload manga metadata. If the manga still exists on the server, it may appear again.",
     "localMangaForgotten": "Local manga reference removed.",
     "operationLog": "Operation log",
     "operationLogDescription": "View or export the last 500 operations in this app session. Credentials, request bodies, response bodies and server URLs are not recorded.",
