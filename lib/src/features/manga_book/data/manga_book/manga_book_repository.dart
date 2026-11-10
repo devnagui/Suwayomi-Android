@@ -61,14 +61,15 @@ class MangaBookRepository {
       )
       .getData((data) => data.updateChapters?.chapters);
 
-  Future<void> deleteChapters(List<int> chapterIds) =>
-      client.mutate$DeleteDownloadedChapters(
+  Future<void> deleteChapters(List<int> chapterIds) => client
+      .mutate$DeleteDownloadedChapters(
         Options$Mutation$DeleteDownloadedChapters(
           variables: Variables$Mutation$DeleteDownloadedChapters(
             input: Input$DeleteDownloadedChaptersInput(ids: chapterIds),
           ),
         ),
-      );
+      )
+      .getData<void>((_) {});
 
   // Mangas
   Future<MangaDto?> getManga({

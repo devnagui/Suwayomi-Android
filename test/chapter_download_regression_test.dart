@@ -70,6 +70,15 @@ class MangaRepositoryStub extends MangaBookRepository {
       modify?.call(batch) ?? super.modifyBulkChapters(batch);
 }
 
+class DownloadsRepositoryStub extends DownloadsRepository {
+  DownloadsRepositoryStub(this.getStatus) : super(errorClient(), errorClient());
+
+  final Future<DownloadStatusDto?> Function() getStatus;
+
+  @override
+  Future<DownloadStatusDto?> getDownloadStatus() => getStatus();
+}
+
 void main() {
   test('chapter mutations throw GraphQL errors through getData', () async {
     final client = errorClient();
@@ -93,6 +102,10 @@ void main() {
           patch: ChapterChange(isRead: true),
         ),
       ),
+      throwsA(isA<OperationMessageException>()),
+    );
+    await expectLater(
+      repository.deleteChapters([1]),
       throwsA(isA<OperationMessageException>()),
     );
   });
@@ -216,8 +229,8 @@ void main() {
     expect(fullRefreshes, 0);
   });
 
-  test('HTTP status survives subscription errors and can be refreshed',
-      () async {
+  testWidgets('HTTP status survives subscription errors and auto-refreshes',
+      (tester) async {
     var statusRequests = 0;
     final status = DownloadStatusDto(
       state: DownloaderState.STARTED,
@@ -230,28 +243,31 @@ void main() {
             StateError('subscription unavailable'),
           ),
         ),
-        downloadStatusProvider.overrideWith((ref) async {
-          statusRequests++;
-          return status;
-        }),
+        downloadsRepositoryProvider.overrideWith(
+          (ref) => DownloadsRepositoryStub(() async {
+            statusRequests++;
+            return status;
+          }),
+        ),
       ],
     );
-    addTearDown(container.dispose);
-    final stateSubscription =
-        container.listen(downloaderStateProvider, (_, __) {});
-    final mapSubscription = container.listen(downloadsMapProvider, (_, __) {});
-    addTearDown(stateSubscription.close);
-    addTearDown(mapSubscription.close);
+    container.listen(downloaderStateProvider, (_, __) {});
+    container.listen(downloadsMapProvider, (_, __) {});
+    try {
+      await container.read(downloadStatusProvider.future);
+      await tester.pump();
+      expect(
+        container.read(downloaderStateProvider).valueOrNull,
+        DownloaderState.STARTED,
+      );
 
-    await container.read(downloadStatusProvider.future);
-    await Future<void>.delayed(Duration.zero);
-    expect(
-      container.read(downloaderStateProvider).valueOrNull,
-      DownloaderState.STARTED,
-    );
-
-    await container.read(downloadsMapProvider.notifier).refresh();
-    expect(statusRequests, 2);
-    expect(container.read(downloadsMapProvider), isEmpty);
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pump();
+      expect(statusRequests, greaterThanOrEqualTo(2));
+      expect(container.read(downloadsMapProvider), isEmpty);
+    } finally {
+      container.dispose();
+      await tester.pump();
+    }
   });
 }

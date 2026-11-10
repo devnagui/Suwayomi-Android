@@ -16,6 +16,15 @@ Stream<DownloadUpdatesDto?> downloadUpdates(Ref ref) =>
 Future<DownloadStatusDto?> downloadStatus(Ref ref) =>
     ref.watch(downloadsRepositoryProvider).getDownloadStatus();
 
+final downloadStatusFallbackProvider =
+    StreamProvider.autoDispose<DownloadStatusDto?>((ref) {
+  final subscription = ref.watch(downloadUpdatesProvider);
+  if (!subscription.hasError) return const Stream.empty();
+  final repository = ref.read(downloadsRepositoryProvider);
+  return Stream.periodic(const Duration(seconds: 5))
+      .asyncMap((_) => repository.getDownloadStatus());
+});
+
 @riverpod
 class DownloadsMap extends _$DownloadsMap {
   void updateDownloadStatus(Fragment$DownloadUpdatesDto? downloadStatusDto) {
@@ -54,6 +63,15 @@ class DownloadsMap extends _$DownloadsMap {
     );
     ref.listen(
       downloadStatusProvider,
+      (_, next) {
+        final downloadStatus = next.valueOrNull;
+        if (downloadStatus != null) {
+          state = getStateFromUpdates(downloadStatus);
+        }
+      },
+    );
+    ref.listen(
+      downloadStatusFallbackProvider,
       (_, next) {
         final downloadStatus = next.valueOrNull;
         if (downloadStatus != null) {
@@ -101,9 +119,17 @@ List<int> downloadsChapterIds(Ref ref) {
 @riverpod
 AsyncValue<DownloaderState?> downloaderState(Ref ref) {
   final subscription = ref.watch(downloadUpdatesProvider);
-  final subscriptionState = subscription.valueOrNull?.state;
-  if (subscriptionState != null) {
-    return AsyncData(subscriptionState);
+  if (!subscription.hasError) {
+    final subscriptionState = subscription.valueOrNull?.state;
+    if (subscriptionState != null) {
+      return AsyncData(subscriptionState);
+    }
+  }
+
+  final fallbackState =
+      ref.watch(downloadStatusFallbackProvider).valueOrNull?.state;
+  if (fallbackState != null) {
+    return AsyncData(fallbackState);
   }
 
   final httpStatus = ref.watch(downloadStatusProvider);
