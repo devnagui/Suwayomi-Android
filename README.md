@@ -79,6 +79,14 @@ These are the versions of [Suwayomi-Server][suwayomi-server] that Sorayomi suppo
 Build this fork with `flutter build apk --release`. The APK is written to
 `build/app/outputs/flutter-apk/app-release.apk`.
 
+Version 0.6.10 retains the recovered 0.6.9 hourly offline caching and structured
+diagnostics, with the chapter-list and horizontal swipe fixes. To build its
+ARM64 upgrade APK, use `flutter build apk --release --split-per-abi
+--target-platform android-arm64`. The ARM64 APK has version code 2007 and is
+written to `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
+Use the existing signing identity and install as an update; do not uninstall
+the app or clear its data to replace an APK.
+
 The [upstream releases][release] refer to the original Sorayomi project, not a
 published release of this fork.
 
@@ -152,7 +160,7 @@ published release of this fork.
     They do not contain credentials, request/response bodies, raw exception
     messages, local filesystem paths, or server URLs. No logs are uploaded
     automatically.
-  - **Unreleased (requires installing the updated APK):** unread,
+  - **Offline caching (open the updated app once after installation):** unread,
     server-downloaded library chapters are
     copied to the device one chapter at a time. Catch-up runs at startup,
     foreground/reconnect, and every five minutes in the foreground, including
@@ -188,6 +196,10 @@ published release of this fork.
 ## Building from source
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+
+Commit source and dependency locks before building a release, and record its
+branch and commit in the build receipt. Integrate parallel worktrees into this
+repository before delivery; an APK is not a backup of uncommitted source.
 
 ### Prerequisites
 
