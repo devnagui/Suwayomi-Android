@@ -79,10 +79,11 @@ These are the versions of [Suwayomi-Server][suwayomi-server] that Sorayomi suppo
 Build this fork with `flutter build apk --release`. The APK is written to
 `build/app/outputs/flutter-apk/app-release.apk`.
 
-Version 0.6.10 retains the recovered 0.6.9 hourly offline caching and structured
-diagnostics, with the chapter-list and horizontal swipe fixes. To build its
+Version 0.6.11 retains hourly offline caching, structured diagnostics and the
+chapter-list/swipe fixes, adding incremental chapter sync and unified Activity
+navigation. To build its
 ARM64 upgrade APK, use `flutter build apk --release --split-per-abi
---target-platform android-arm64`. The ARM64 APK has version code 2007 and is
+--target-platform android-arm64`. The ARM64 APK has version code 2008 and is
 written to `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
 Use the existing signing identity and install as an update; do not uninstall
 the app or clear its data to replace an APK.
@@ -95,17 +96,31 @@ published release of this fork.
 
   - Configure your server address in `Navigation bar > more screen > Server URL`.
   - Manga chapter lists load the chapters already stored on the server, without
-    requiring the source website to respond. Reopening manga details reloads
-    that list; pull to refresh (or the tablet refresh button) checks the source
+    requiring the source website to respond. After the first full load,
+    reopening manga details checks a lightweight server ID/status/order index
+    and fetches full details only for missing chapters or changed URLs.
+    Unchanged chapter metadata is not rewritten. IDs, not chapter numbers or
+    timestamps, identify missing entries, so late/backfilled chapters are
+    included. Read/bookmark/download state, page counts and source ordering
+    still update for existing chapters; server removals never delete device
+    page files. Full source refresh also reloads names, scanlators and other
+    metadata for known chapters. Pull to refresh (or the tablet refresh button) checks the source
     for new chapters. Only network outages use offline chapter metadata.
     Source/authentication errors stay visible instead of silently showing an
     older list. Operation logs record chapter counts, active chapter filters,
     visible counts, and offline fallback. If a chapter appears in Updates but
     not manga details, also check unread, downloaded, bookmarked, and scanlator
     filters; those filters apply only to the manga's chapter list.
-  - **Updates** lists recently discovered library chapters. **Downloads**
+  - **Activity** replaces the separate Updates and Downloads navigation
+    destinations on phones and tablets. Its **Updates** and **Downloads**
+    sections preserve their own scroll/selection/navigation state and controls;
+    existing `/updates` and `/downloads` links still select the right section.
+    **Updates** lists recently discovered library chapters. **Downloads**
     manages the server's download queue (progress, pause/resume, and cancellation).
-    They are not duplicate views; downloaded chapters can still appear in Updates.
+    Their functions remain distinct within one destination; downloaded chapters
+    can still appear in Updates. Source-website fetching remains governed by
+    the server/extension API, which does not expose a chapter-number cutoff;
+    incremental Android sync does not claim to make source listing incremental.
   - In **Settings > Reader**, turning **Swipe toggle** off disables left/right
     page dragging in single-page and continuous horizontal readers, including
     right-to-left mode. The existing chapter-swipe-labeled setting also controls

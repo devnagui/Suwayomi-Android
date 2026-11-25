@@ -17,6 +17,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/popup_widgets/pop_button.dart';
 import '../../data/downloads/downloads_repository.dart';
 import '../../domain/downloads/downloads_model.dart';
+import '../activity/activity_screen.dart';
 import 'controller/downloads_controller.dart';
 import 'widgets/download_progress_list_tile.dart';
 import 'widgets/downloads_fab.dart';
@@ -26,6 +27,7 @@ class DownloadsScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activity = ActivityScreen.maybeOf(context);
     final toast = ref.watch(toastProvider);
     final downloadsChapterIds = ref.watch(downloadsChapterIdsProvider);
     final downloadsGlobalStatus = ref.watch(downloaderStateProvider);
@@ -74,7 +76,10 @@ class DownloadsScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.downloads),
+        title: Text(activity == null
+            ? context.l10n.downloads
+            : context.l10n.activity),
+        bottom: activity == null ? null : const ActivityTabs(),
         actions: [
           if ((downloadsChapterIds).isNotBlank)
             IconButton(

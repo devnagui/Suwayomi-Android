@@ -15,6 +15,7 @@ import '../features/browse_center/presentation/source_preference/source_preferen
 import '../features/history/presentation/history_screen.dart';
 import '../features/library/presentation/category/edit_category_screen.dart';
 import '../features/library/presentation/library/library_screen.dart';
+import '../features/manga_book/presentation/activity/activity_screen.dart';
 import '../features/manga_book/presentation/downloads/downloads_screen.dart';
 import '../features/manga_book/presentation/manga_details/manga_details_screen.dart';
 import '../features/manga_book/presentation/reader/reader_screen.dart';
@@ -43,6 +44,7 @@ import '../widgets/shell/navigation_shell_screen.dart';
 
 part 'router_config.g.dart';
 part 'sub_routes/browser_routes.dart';
+part 'sub_routes/activity_routes.dart';
 part 'sub_routes/common_routes.dart';
 part 'sub_routes/downloads_routes.dart';
 part 'sub_routes/history_routes.dart';
@@ -61,6 +63,8 @@ final _browseNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'browse');
 
 abstract class Routes {
   static const library = '/library/:categoryId';
+
+  static const activity = '/activity';
 
   static const updates = '/updates';
 
@@ -125,8 +129,19 @@ GoRouter routerConfig(ref) {
             ),
           ],
         ),
-        TypedStatefulShellBranch<UpdatesBranch>(
-          routes: [TypedGoRoute<UpdatesRoute>(path: Routes.updates)],
+        TypedStatefulShellBranch<ActivityBranch>(
+          routes: [
+            TypedStatefulShellRoute<ActivityShellRoute>(
+              branches: [
+                TypedStatefulShellBranch<UpdatesBranch>(
+                  routes: [TypedGoRoute<UpdatesRoute>(path: Routes.updates)],
+                ),
+                TypedStatefulShellBranch<DownloadsBranch>(
+                  routes: [TypedGoRoute<DownloadsRoute>(path: Routes.downloads)],
+                ),
+              ],
+            ),
+          ],
         ),
         TypedStatefulShellBranch<HistoryBranch>(
           routes: [TypedGoRoute<HistoryTabRoute>(path: '/history')],
@@ -160,9 +175,6 @@ GoRouter routerConfig(ref) {
               ],
             ),
           ],
-        ),
-        TypedStatefulShellBranch<DownloadsBranch>(
-          routes: [TypedGoRoute<DownloadsRoute>(path: Routes.downloads)],
         ),
         TypedStatefulShellBranch<MoreBranch>(
           routes: [
@@ -207,6 +219,7 @@ GoRouter routerConfig(ref) {
         ),
       ],
     ),
+    TypedGoRoute<ActivityRoute>(path: Routes.activity),
     TypedGoRoute<MangaRoute>(
       path: Routes.mangaRoute,
       routes: [TypedGoRoute<ReaderRoute>(path: Routes.reader)],

@@ -1,5 +1,9 @@
 {
     "@@locale": "en",
+    "activity": "Activity",
+    "@activity": {
+        "description": "Navigation destination and screen title combining Updates and Downloads"
+    },
     "@about": {
         "description": "Screen title and Button text of About screen"
     },
