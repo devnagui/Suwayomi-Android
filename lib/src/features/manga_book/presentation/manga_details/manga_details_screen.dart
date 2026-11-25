@@ -77,11 +77,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
       if (context.mounted && onlineFetch) {
         isRefreshing.value = false;
         final chapterState = ref.read(chapterListProvider);
-        if (manga.hasError || chapterState.hasError) {
+        final mangaState = ref.read(mangaProvider);
+        if (mangaState.hasError || chapterState.hasError) {
           ref.read(toastProvider)?.showError(
-                manga.hasError
-                    ? context.l10n.errorSomethingWentWrong
-                    : 'Erro ao carregar capítulos. Tente novamente.',
+                (chapterState.error ?? mangaState.error).toString(),
               );
         } else {
           ref.read(toastProvider)?.show(
@@ -93,9 +92,10 @@ class MangaDetailsScreen extends HookConsumerWidget {
     }, [context, mangaRefresh, chapterListRefresh]);
 
     useEffect(() {
-      if (filteredChapterList.isNotLoading && manga.isNotLoading) refresh();
+      if (manga.hasValue) mangaRefresh();
+      if (ref.read(chapterListProvider).hasValue) chapterListRefresh();
       return;
-    }, []);
+    }, [mangaId]);
 
     // Migration function
     void startMigration(BuildContext context, int mangaId, dynamic manga) {

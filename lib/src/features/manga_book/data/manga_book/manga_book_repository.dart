@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -24,10 +26,16 @@ import './__generated__/query.graphql.dart';
 part 'manga_book_repository.g.dart';
 
 class MangaBookRepository {
-  const MangaBookRepository(this.client, this.ref, {this.cacheChapterPages = true});
+  const MangaBookRepository(
+    this.client,
+    this.ref, {
+    this.cacheChapterPages = true,
+    MutationCache? cache,
+  }) : _cache = cache;
   final GraphQLClient client;
   final Ref ref;
   final bool cacheChapterPages;
+  final MutationCache? _cache;
 
   Future<MangaDto?> addMangaToLibrary(int mangaId) => client
       .mutate$UpdateManga(
@@ -218,79 +226,114 @@ class MangaBookRepository {
         ),
       );
 
-  Future<List<ChapterDto>?> getChapterList(int mangaId) async {
-    final cache = MutationCache();
-    final cacheKey = 'chapter_list_$mangaId';
+  Future<List<ChapterDto>?> getChapterList(int mangaId) =>
+      _loadChapterList(mangaId, () async {
+        final chapters = <ChapterDto>[];
+        String? after;
+        do {
+          final page = await client
+              .query$GetChapterPage(
+                Options$Query$GetChapterPage(
+                  fetchPolicy: FetchPolicy.networkOnly,
+                  variables: Variables$Query$GetChapterPage(
+                    condition: Input$ChapterConditionInput(mangaId: mangaId),
+                    first: 500,
+                    after: after,
+                    order: [
+                      Input$ChapterOrderInput(
+                        by: Enum$ChapterOrderBy.SOURCE_ORDER,
+                        byType: Enum$SortOrder.ASC,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .getData((data) => data.chapters);
+          if (page == null) {
+            throw StateError('Chapter list returned no result');
+          }
+          chapters.addAll(page.nodes);
+          if (!page.pageInfo.hasNextPage) break;
+          final next = page.pageInfo.endCursor;
+          if (next == null || next == after) {
+            throw StateError('Chapter list returned an invalid cursor');
+          }
+          after = next;
+        } while (true);
+        // New manga have no stored chapters until their first source fetch.
+        if (chapters.isEmpty) return await _fetchChapterList(mangaId);
+        return chapters;
+      });
 
-    Future<List<ChapterDto>?> fetch() => client
-        .mutate$GetChaptersByMangaId(
-          Options$Mutation$GetChaptersByMangaId(
-            variables: Variables$Mutation$GetChaptersByMangaId(
-              input: Input$FetchMangaAndChaptersInput(
-                id: mangaId,
-                fetchManga: false,
-                fetchChapters: true,
-              ),
+  Future<List<ChapterDto>?> fetchChapterList(int mangaId) =>
+      _loadChapterList(mangaId, () => _fetchChapterList(mangaId));
+
+  Future<List<ChapterDto>?> _fetchChapterList(int mangaId) => client
+      .mutate$GetChaptersByMangaId(
+        Options$Mutation$GetChaptersByMangaId(
+          variables: Variables$Mutation$GetChaptersByMangaId(
+            input: Input$FetchMangaAndChaptersInput(
+              id: mangaId,
+              fetchManga: false,
+              fetchChapters: true,
             ),
           ),
-        )
-        .getData((data) => data.fetchChapters?.chapters);
+        ),
+      )
+      .getData((data) => data.fetchChapters?.chapters);
+
+  Future<List<ChapterDto>?> _loadChapterList(
+    int mangaId,
+    Future<List<ChapterDto>?> Function() fetch,
+  ) async {
+    final cache = _cache ?? MutationCache();
+    final cacheKey = 'chapter_list_$mangaId';
+    Future<List<ChapterDto>?> fetchAndCache() async {
+      final result = await fetch();
+      if (result == null) {
+        throw StateError('Chapter list returned no result');
+      }
+      await cache.put(cacheKey, result.map((c) => c.toJson()).toList());
+      for (final chapter in result) {
+        await cache.put('chapter_${chapter.id}', chapter.toJson());
+      }
+      OperationLog.instance.record('ChapterMetadataCache',
+          outcome: 'processed',
+          stage: 'metadata_cache',
+          mangaId: mangaId,
+          count: result.length);
+      OperationLog.instance.record('MangaChapterList',
+          outcome: 'server', mangaId: mangaId, count: result.length);
+      return result;
+    }
 
     try {
-      final result = await fetch();
-      if (result != null) {
-        await cache.put(cacheKey, result.map((c) => c.toJson()).toList());
-        // Also cache each chapter individually for the reader
-        for (final chapter in result) {
-          await cache.put('chapter_${chapter.id}', chapter.toJson());
-        }
-        OperationLog.instance.record('ChapterMetadataCache', outcome: 'processed',
-            stage: 'metadata_cache', mangaId: mangaId, count: result.length);
+      try {
+        return await fetchAndCache();
+      } on OperationMessageException catch (error) {
+        final didRefresh = await refreshUiLoginToken(
+          ref: ref,
+          client: client,
+          exception: error.exception,
+        );
+        if (!didRefresh) rethrow;
+        return await fetchAndCache();
       }
-      return result;
     } on OperationMessageException catch (error) {
-      final didRefresh = await refreshUiLoginToken(
-        ref: ref,
-        client: client,
-        exception: error.exception,
-      );
-      if (didRefresh) {
-        try {
-          final result = await fetch();
-          if (result != null) {
-            await cache.put(cacheKey, result.map((c) => c.toJson()).toList());
-            for (final chapter in result) {
-              await cache.put('chapter_${chapter.id}', chapter.toJson());
-            }
-            OperationLog.instance.record('ChapterMetadataCache',
-                outcome: 'processed', stage: 'metadata_cache',
-                mangaId: mangaId, count: result.length);
-          }
-          return result;
-        } catch (error, stackTrace) {
-          final cached = await cache.get(cacheKey);
-          if (cached != null) {
-            return (cached as List)
-                .map((e) => chapterFromJson(e as Map<String, dynamic>))
-                .toList();
-          }
-          Error.throwWithStackTrace(error, stackTrace);
+      final exception = error.exception;
+      if (exception.graphqlErrors.isEmpty &&
+          (exception.linkException is NetworkException ||
+              exception.linkException?.originalException is TimeoutException)) {
+        final cached = await cache.get(cacheKey);
+        if (cached != null) {
+          OperationLog.instance.record('MangaChapterList',
+              outcome: 'offline_cache',
+              mangaId: mangaId,
+              count: (cached as List).length);
+          return cached
+              .map((e) => chapterFromJson(e as Map<String, dynamic>))
+              .toList();
         }
-      }
-
-      final cached = await cache.get(cacheKey);
-      if (cached != null) {
-        return (cached as List)
-            .map((e) => chapterFromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-      rethrow;
-    } catch (_) {
-      final cached = await cache.get(cacheKey);
-      if (cached != null) {
-        return (cached as List)
-            .map((e) => chapterFromJson(e as Map<String, dynamic>))
-            .toList();
       }
       rethrow;
     }

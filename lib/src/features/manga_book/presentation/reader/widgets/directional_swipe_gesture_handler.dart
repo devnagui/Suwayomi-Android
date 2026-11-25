@@ -56,7 +56,9 @@ class DirectionalSwipeGestureHandler extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final bool useAdvancedGestures =
-        lastPageSwipeEnabled && !readerSwipeChapterToggle;
+        scrollDirection == Axis.vertical &&
+            lastPageSwipeEnabled &&
+            !readerSwipeChapterToggle;
 
     if (useAdvancedGestures) {
       return _buildAdvancedGestureHandler(context);
@@ -96,20 +98,24 @@ class DirectionalSwipeGestureHandler extends HookWidget {
       onLongPressMoveUpdate: onLongPressMoveUpdate,
       onTap: onTap,
       behavior: HitTestBehavior.translucent,
-      onHorizontalDragEnd: (details) {
-        _handleSwipeGesture(
-          context: context,
-          details: details,
-          allowedAxis: Axis.vertical,
-        );
-      },
-      onVerticalDragEnd: (details) {
-        _handleSwipeGesture(
-          context: context,
-          details: details,
-          allowedAxis: Axis.horizontal,
-        );
-      },
+      onHorizontalDragEnd: readerSwipeChapterToggle
+          ? (details) {
+              _handleSwipeGesture(
+                context: context,
+                details: details,
+                allowedAxis: Axis.vertical,
+              );
+            }
+          : null,
+      onVerticalDragEnd: readerSwipeChapterToggle
+          ? (details) {
+              _handleSwipeGesture(
+                context: context,
+                details: details,
+                allowedAxis: Axis.horizontal,
+              );
+            }
+          : null,
       child: child,
     );
   }

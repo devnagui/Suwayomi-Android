@@ -21,6 +21,7 @@ import '../../../../../settings/presentation/reader/widgets/reader_scroll_animat
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../utils/reader_scroll_physics.dart';
 import '../chapter_separator.dart';
 import '../reader_wrapper.dart';
 
@@ -193,6 +194,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
               : chapter.lastPageRead.getValueOnNullOrNegative(),
           scrollDirection: scrollDirection,
           reverse: reverse,
+          physics: ref.watch(readerScrollPhysicsProvider(scrollDirection)),
           itemCount: chapterPages.chapter.pageCount,
           minCacheExtent: scrollDirection == Axis.vertical
               ? context.height * 2

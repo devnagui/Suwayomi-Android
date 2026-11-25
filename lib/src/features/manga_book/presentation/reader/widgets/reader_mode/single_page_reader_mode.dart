@@ -22,6 +22,7 @@ import '../../../../../settings/presentation/reader/widgets/reader_scroll_animat
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../utils/reader_scroll_physics.dart';
 import '../reader_wrapper.dart';
 
 class SinglePageReaderMode extends HookConsumerWidget {
@@ -119,8 +120,9 @@ class SinglePageReaderMode extends HookConsumerWidget {
         reverse: reverse,
         controller: scrollController,
         allowImplicitScrolling: true,
-        physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
+        physics: ref.watch(readerScrollPhysicsProvider(scrollDirection)) ??
+            const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
         itemBuilder: (BuildContext context, int index) {
           // Show loading indicator if no pages are available yet
           if (chapterPages.pages.isEmpty) {

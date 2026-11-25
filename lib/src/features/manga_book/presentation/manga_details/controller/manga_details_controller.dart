@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/logger/operation_log.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../library/domain/category/category_model.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
@@ -40,8 +41,10 @@ class MangaChapterList extends _$MangaChapterList {
   }
 
   Future<void> refresh([bool onlineFetch = false]) async {
-    final result = await AsyncValue.guard(
-        () => ref.read(mangaBookRepositoryProvider).getChapterList(mangaId));
+    final repository = ref.read(mangaBookRepositoryProvider);
+    final result = await AsyncValue.guard(() => onlineFetch
+        ? repository.fetchChapterList(mangaId)
+        : repository.getChapterList(mangaId));
     ref.keepAlive();
     if (result.hasError) {
       state = result.copyWithPrevious(state);
@@ -164,7 +167,21 @@ AsyncValue<List<ChapterDto>?> mangaChapterListWithFilter(
   }
 
   return chapterList.copyWithData(
-    (data) => [...?data?.where(applyChapterFilter)]..sort(applyChapterSort),
+    (data) {
+      final filtered = [...?data?.where(applyChapterFilter)]
+        ..sort(applyChapterSort);
+      OperationLog.instance.record(
+        'MangaChapterFilter',
+        outcome: 'visible',
+        mangaId: mangaId,
+        count: filtered.length,
+        action:
+            'unread_${chapterFilterUnread}_downloaded_$chapterFilterDownloaded'
+            '_bookmarked_$chapterFilterBookmark'
+            '_scanlator_${chapterFilterScanlator != MangaMetaKeys.scanlator.key}',
+      );
+      return filtered;
+    },
   );
 }
 

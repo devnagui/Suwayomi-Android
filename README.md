@@ -86,6 +86,24 @@ published release of this fork.
 ## Post installation
 
   - Configure your server address in `Navigation bar > more screen > Server URL`.
+  - Manga chapter lists load the chapters already stored on the server, without
+    requiring the source website to respond. Reopening manga details reloads
+    that list; pull to refresh (or the tablet refresh button) checks the source
+    for new chapters. Only network outages use offline chapter metadata.
+    Source/authentication errors stay visible instead of silently showing an
+    older list. Operation logs record chapter counts, active chapter filters,
+    visible counts, and offline fallback. If a chapter appears in Updates but
+    not manga details, also check unread, downloaded, bookmarked, and scanlator
+    filters; those filters apply only to the manga's chapter list.
+  - **Updates** lists recently discovered library chapters. **Downloads**
+    manages the server's download queue (progress, pause/resume, and cancellation).
+    They are not duplicate views; downloaded chapters can still appear in Updates.
+  - In **Settings > Reader**, turning **Swipe toggle** off disables left/right
+    page dragging in single-page and continuous horizontal readers, including
+    right-to-left mode. The existing chapter-swipe-labeled setting also controls
+    horizontal page swipes. Tap navigation, the page slider, vertical/webtoon
+    scrolling, pinch zoom, and panning a zoomed page remain available.
+    **Last page swipe** does not override disabled horizontal swiping.
   - Chapter selection actions on manga details and Updates reserve their own
     space above Android's navigation buttons/gesture area. The action surface
     is opaque and wraps on narrow displays rather than covering chapter rows.
