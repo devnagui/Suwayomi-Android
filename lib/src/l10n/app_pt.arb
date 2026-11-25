@@ -993,5 +993,7 @@
     "description": "to show Number of days with plural"
   },
   "migrationCancelledMessage": "O processo de migração foi cancelado. Não foram feitas alterações.",
-  "@migrationCancelledMessage": {}
+  "@migrationCancelledMessage": {},
+  "saveOnDevice": "Salvar no dispositivo",
+  "offlineCacheFailed": "Não foi possível salvar o capítulo neste dispositivo. Tente novamente pelo capítulo ou consulte o registro de operações."
 }

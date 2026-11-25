@@ -11,6 +11,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/logger/operation_log.dart';
 import '../../../../utils/network/auth_token_refresh.dart';
 import '../../../../utils/network/mutation_cache.dart';
 import '../../../library/domain/category/category_model.dart';
@@ -23,9 +24,10 @@ import './__generated__/query.graphql.dart';
 part 'manga_book_repository.g.dart';
 
 class MangaBookRepository {
-  const MangaBookRepository(this.client, this.ref);
+  const MangaBookRepository(this.client, this.ref, {this.cacheChapterPages = true});
   final GraphQLClient client;
   final Ref ref;
+  final bool cacheChapterPages;
 
   Future<MangaDto?> addMangaToLibrary(int mangaId) => client
       .mutate$UpdateManga(
@@ -165,11 +167,12 @@ class MangaBookRepository {
             ),
           )
           .getData((data) => data.fetchChapterPages);
-      if (result != null) {
+      if (result != null && cacheChapterPages) {
         await cache.put(cacheKey, result.toJson());
       }
       return result;
     } catch (_) {
+      if (!cacheChapterPages) rethrow;
       // Offline fallback
       final cached = await cache.get(cacheKey);
       if (cached != null) {
@@ -241,6 +244,8 @@ class MangaBookRepository {
         for (final chapter in result) {
           await cache.put('chapter_${chapter.id}', chapter.toJson());
         }
+        OperationLog.instance.record('ChapterMetadataCache', outcome: 'processed',
+            stage: 'metadata_cache', mangaId: mangaId, count: result.length);
       }
       return result;
     } on OperationMessageException catch (error) {
@@ -257,6 +262,9 @@ class MangaBookRepository {
             for (final chapter in result) {
               await cache.put('chapter_${chapter.id}', chapter.toJson());
             }
+            OperationLog.instance.record('ChapterMetadataCache',
+                outcome: 'processed', stage: 'metadata_cache',
+                mangaId: mangaId, count: result.length);
           }
           return result;
         } catch (error, stackTrace) {

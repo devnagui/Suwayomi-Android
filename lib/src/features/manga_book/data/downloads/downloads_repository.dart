@@ -110,6 +110,22 @@ class DownloadsRepository {
         ),
       )
       .getData((data) => data.downloadStatus);
+
+  Future<Query$GetOfflineCacheCandidates$chapters?> getOfflineCacheCandidates({
+    String? after,
+  }) =>
+      client
+          .query$GetOfflineCacheCandidates(
+            Options$Query$GetOfflineCacheCandidates(
+              operationName: 'GetOfflineCacheCandidates',
+              fetchPolicy: FetchPolicy.networkOnly,
+              variables: Variables$Query$GetOfflineCacheCandidates(
+                after: after,
+                first: 25,
+              ),
+            ),
+          )
+          .getData((data) => data.chapters);
 }
 
 @riverpod

@@ -480,5 +480,10 @@ void main() {
     );
     expect(log.exportText(), contains('transport_error'));
     expect(log.exportText(), isNot(contains('private-server')));
+    final event = log.latestEvent('Test')!;
+    expect(event['errorType'], 'SocketException');
+    expect((event['exception'] as Map)['type'], 'SocketException');
+    expect(event['reasonCode'], 'network_unavailable');
+    expect(log.exportJson(), isNot(contains('private transport details')));
   });
 }

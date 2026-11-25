@@ -86,6 +86,7 @@ class DownloadStatusIcon extends HookConsumerWidget {
     serverResult.showToastOnError(toast);
     if (serverResult.hasError) return false;
 
+    await ref.read(localDownloadQueueProvider.notifier).cancel(chapter.id);
     final localResult = await AsyncValue.guard(
       () => ref
           .read(offlineChapterManagerProvider)
@@ -306,9 +307,35 @@ class DownloadStatusIcon extends HookConsumerWidget {
 
     // Downloaded on the server but not yet cached on this device.
     if (localIsDownloaded.value) {
-      return IconButton(
+      return PopupMenuButton<String>(
+        tooltip: context.l10n.saveOnDevice,
         icon: const Icon(Icons.check_circle_rounded),
-        onPressed: removeDownloaded,
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'save',
+            child: Text(context.l10n.saveOnDevice),
+          ),
+          PopupMenuItem(
+            value: 'delete',
+            child: Text(context.l10n.delete),
+          ),
+        ],
+        onSelected: (action) async {
+          if (action == 'delete') {
+            await removeDownloaded();
+            return;
+          }
+          OperationLog.instance.record(
+            'DownloadUiAction',
+            outcome: 'triggered',
+            action: 'save_on_device',
+            mangaId: mangaId,
+            chapterId: chapter.id,
+          );
+          await ref
+              .read(localDownloadQueueProvider.notifier)
+              .enqueue(mangaId, chapter.id);
+        },
       );
     }
 

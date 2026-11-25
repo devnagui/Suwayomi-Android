@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../../utils/network/offline_chapter_manager.dart';
 import '../data/manga_book/manga_book_repository.dart';
@@ -103,6 +102,7 @@ class LocalDownloadIcon extends HookConsumerWidget {
 
       // Start downloading
       final manager = ref.read(offlineChapterManagerProvider);
+      await manager.allowAutomaticCache(mangaId, chapter.id);
       await for (final status in manager.downloadChapter(
         mangaId: mangaId,
         chapterId: chapter.id,

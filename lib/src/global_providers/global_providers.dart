@@ -28,7 +28,12 @@ import '../utils/network/token_manager.dart';
 part 'global_providers.g.dart';
 
 @riverpod
-GraphQLClient graphQlClient(Ref ref) {
+GraphQLClient graphQlClient(Ref ref) => createGraphQlClient(
+      ref,
+      cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
+    );
+
+GraphQLClient createGraphQlClient(Ref ref, {required GraphQLCache cache}) {
   final authType = ref.watch(authTypeKeyProvider) ?? DBKeys.authType.initial;
   final credentials = ref.watch(credentialsProvider);
 
@@ -98,7 +103,7 @@ GraphQLClient graphQlClient(Ref ref) {
     defaultPolicies: DefaultPolicies(
       query: Policies(fetch: FetchPolicy.cacheAndNetwork),
     ),
-    cache: GraphQLCache(store: ref.watch(hiveStoreProvider)),
+    cache: cache,
   );
 }
 

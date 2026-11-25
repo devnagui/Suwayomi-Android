@@ -114,11 +114,58 @@ published release of this fork.
   - **Operation log** is available from **More**, **Settings > General**, and
     the log icon on **Settings > Server** and the **UI Login** dialog, including
     when login fails. It shows the last 500 GraphQL, media and cache operations.
-    Choose **Copy log** or **Export operation log** to share diagnostics.
+    Choose **Copy log** or **Export operation log** to share versioned JSON
+    diagnostics (`suwayomi-android-operations.json`). The viewer remains
+    human-readable. JSON includes app/build versions, request IDs, processing
+    stages, download states, attempts, progress and safe exception types,
+    reason codes and application-only stack locations when available.
+    Metadata caching is summarized per batch, not per chapter; individual
+    storage failures remain visible.
+    The latest 50 failures are retained separately so ordinary activity
+    cannot immediately evict them from the 500-event history.
+    An HTTP 200 response acknowledges an API call, not a finished download.
+    The current server download API exposes no exception/message field:
+    queue errors use `server_reason_unavailable`, requiring server logs for
+    their cause. Known server exceptions are classified only when an API
+    response actually supplies them; no backend exception is invented.
     Login errors are selectable and have a separate **Copy error** button.
     Copy or export before restarting the app.
-    Logs are bounded, clear on app restart, and do not contain credentials,
-    request/response bodies, or server URLs. No logs are uploaded automatically.
+    Logs are bounded and clear on app restart or explicit log clearing.
+    They do not contain credentials, request/response bodies, raw exception
+    messages, local filesystem paths, or server URLs. No logs are uploaded
+    automatically.
+  - **Unreleased (requires installing the updated APK):** unread,
+    server-downloaded library chapters are
+    copied to the device one chapter at a time. Catch-up runs at startup,
+    foreground/reconnect, and every five minutes in the foreground, including
+    chapters the server finished while Android was closed. After setup/sign-in,
+    Android WorkManager also checks approximately every hour while the app
+    is closed, using an unmetered connection (normally Wi-Fi), sufficient
+    battery and free storage; charging is not required. Open the updated app
+    once to register the job. Reboot does not remove its schedule, but Doze,
+    Samsung sleeping-app settings, loss of connectivity, or force-stop can
+    delay/prevent execution; an exact hourly deadline is not guaranteed.
+    On Samsung, allow background activity and remove the app from sleeping/
+    deep-sleeping apps if necessary. A run is bounded to eight minutes and
+    retries incomplete chapters on a later run. It only copies chapters the
+    server reports downloaded; it does not request source updates or
+    re-enqueue server downloads.
+    Metadata is paged in batches of 25; read chapters and non-library manga
+    are not automatically backfilled. A server-only chapter's checkmark menu
+    offers **Save on device** (including read chapters) and the existing
+    **Delete** action. Green download checks indicate local offline copies.
+    Catch-up failures appear as `OfflineCacheCatchUp failed` in Operation log;
+    local copy failures also show a notification and a retry icon. Hourly
+    scheduling and the previous background run's result appear as
+    `OfflineCacheHourly` entries when the app is opened/resumed. The latest
+    background receipt persists its actual completion time, copy/skip/failure
+    counts and safe failure details, where available; a completed scan does
+    not by itself mean any chapters were copied. Explicit
+    local deletions stay excluded from automatic copying across restarts;
+    **Save on device** permits copying them again. Completion manifests and
+    atomically published pages protect caches from interrupted workers.
+    No source
+    timeout, server download queue, or resource-guard setting is changed.
 
 ## Building from source
 

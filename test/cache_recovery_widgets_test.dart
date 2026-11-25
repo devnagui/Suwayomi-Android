@@ -151,7 +151,10 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Export operation log'));
     await tester.pumpAndSettle();
     expect(picker.savedBytes, isNotNull);
-    expect(utf8.decode(picker.savedBytes!), contains('id=37'));
+    final exported = jsonDecode(utf8.decode(picker.savedBytes!))
+        as Map<String, dynamic>;
+    expect(exported['schemaVersion'], 1);
+    expect((exported['events'] as List).single['id'], 37);
     expect(find.text('Operation log saved.'), findsOneWidget);
     await tester.tap(find.widgetWithText(TextButton, 'Clear operation log'));
     await tester.pumpAndSettle();

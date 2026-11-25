@@ -14,12 +14,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'src/features/about/presentation/about/controllers/about_controller.dart';
 import 'src/global_providers/global_providers.dart';
 import 'src/sorayomi.dart';
+import 'src/utils/logger/operation_log.dart';
+import 'src/utils/network/hourly_offline_cache.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final packageInfo = await PackageInfo.fromPlatform();
+  OperationLog.instance.setAppInfo(packageInfo.version, packageInfo.buildNumber);
   final sharedPreferences = await SharedPreferences.getInstance();
   await initHiveForFlutter();
+  await initializeHourlyOfflineCache();
+  await reportHourlyOfflineCache(sharedPreferences);
 
   // Migrate timeout if the user still has an old default.
   final savedTimeout = sharedPreferences.getInt('serverRequestTimeout');

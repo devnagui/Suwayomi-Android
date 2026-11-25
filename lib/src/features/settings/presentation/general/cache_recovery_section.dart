@@ -159,7 +159,7 @@ class OperationLogTile extends StatelessWidget {
                       ? null
                       : () async {
                           await Clipboard.setData(
-                              ClipboardData(text: log.exportText()));
+                              ClipboardData(text: log.exportJson()));
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(l10n.copied)),
@@ -200,11 +200,11 @@ class OperationLogTile extends StatelessWidget {
                           final result = await AsyncValue.guard(
                               () => FilePicker.platform.saveFile(
                                     dialogTitle: l10n.exportOperationLog,
-                                    fileName: 'suwayomi-android-operations.txt',
+                                    fileName: 'suwayomi-android-operations.json',
                                     type: FileType.custom,
-                                    allowedExtensions: ['txt'],
+                                    allowedExtensions: ['json'],
                                     bytes: Uint8List.fromList(
-                                        utf8.encode(log.exportText())),
+                                        utf8.encode(log.exportJson())),
                                   ));
                           if (!context.mounted) return;
                           if (result.hasError) {

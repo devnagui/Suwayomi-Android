@@ -1,6 +1,7 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../../utils/logger/operation_log.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
 import '../../../domain/downloads/graphql/__generated__/fragment.graphql.dart';
@@ -9,20 +10,111 @@ import '../../../domain/downloads_queue/downloads_queue_model.dart';
 part 'downloads_controller.g.dart';
 
 @riverpod
-Stream<DownloadUpdatesDto?> downloadUpdates(Ref ref) =>
-    ref.watch(downloadsRepositoryProvider).downloadStatusSubscription();
+Stream<DownloadUpdatesDto?> downloadUpdates(Ref ref) {
+  final diagnostics = ref.watch(serverDownloadDiagnosticsProvider);
+  return ref
+      .watch(downloadsRepositoryProvider)
+      .downloadStatusSubscription()
+      .map((updates) {
+    diagnostics.subscription(updates);
+    return updates;
+  });
+}
 
 @riverpod
-Future<DownloadStatusDto?> downloadStatus(Ref ref) =>
-    ref.watch(downloadsRepositoryProvider).getDownloadStatus();
+Future<DownloadStatusDto?> downloadStatus(Ref ref) async {
+  final diagnostics = ref.watch(serverDownloadDiagnosticsProvider);
+  final status =
+      await ref.watch(downloadsRepositoryProvider).getDownloadStatus();
+  diagnostics.snapshot(status);
+  return status;
+}
+
+/// Shared by the root subscription, HTTP refreshes and the existing fallback.
+/// A successful HTTP request accepts work; only downloader states describe its
+/// result. DownloadType has no source exception or failure-message field.
+final serverDownloadDiagnosticsProvider = Provider((ref) {
+  ref.watch(downloadsRepositoryProvider);
+  return ServerDownloadDiagnostics();
+});
+
+class ServerDownloadDiagnostics {
+  ServerDownloadDiagnostics({OperationLog? log})
+      : _log = log ?? OperationLog.instance;
+
+  final OperationLog _log;
+  final _last = <(int, int), ({String state, int attempt, int bucket})>{};
+
+  void subscription(DownloadUpdatesDto? updates) {
+    for (final download in [...?updates?.initial]) {
+      observe(download);
+    }
+    for (final update in [...?updates?.updates]) {
+      observe(update.download, event: update.type);
+    }
+  }
+
+  void snapshot(DownloadStatusDto? status) {
+    for (final download in [...?status?.queue]) {
+      observe(download);
+    }
+    // Absence from a snapshot does not prove completion (it may be removal).
+  }
+
+  void observe(DownloadDto download, {DownloadUpdateType? event}) {
+    final state = switch (event) {
+      DownloadUpdateType.FINISHED => 'FINISHED',
+      DownloadUpdateType.DEQUEUED => 'DEQUEUED',
+      DownloadUpdateType.ERROR => 'ERROR',
+      DownloadUpdateType.QUEUED => 'QUEUED',
+      DownloadUpdateType.PAUSED => 'PAUSED',
+      DownloadUpdateType.STOPPED => 'STOPPED',
+      _ => download.state.name,
+    };
+    final percent = download.progress.isFinite
+        ? (download.progress * 100).round().clamp(0, 100)
+        : 0;
+    final bucket = percent ~/ 25;
+    final key = (download.manga.id, download.chapter.id);
+    final previous = _last[key];
+    if (previous != null &&
+        previous.state == state &&
+        previous.attempt == download.tries &&
+        (state != 'DOWNLOADING' || bucket <= previous.bucket)) {
+      return;
+    }
+    _last[key] = (state: state, attempt: download.tries, bucket: bucket);
+    _log.record(
+      'ServerChapterDownload',
+      stage: 'server_download',
+      outcome: switch (state) {
+        'ERROR' => 'failed',
+        'FINISHED' => 'completed',
+        'DEQUEUED' => 'dequeued',
+        _ => 'observed',
+      },
+      mangaId: download.manga.id,
+      chapterId: download.chapter.id,
+      state: state,
+      attempt: download.tries,
+      progressPercent: percent,
+      reasonCode: state == 'ERROR' ? 'server_reason_unavailable' : null,
+    );
+  }
+}
 
 final downloadStatusFallbackProvider =
     StreamProvider.autoDispose<DownloadStatusDto?>((ref) {
   final subscription = ref.watch(downloadUpdatesProvider);
   if (!subscription.hasError) return const Stream.empty();
   final repository = ref.read(downloadsRepositoryProvider);
+  final diagnostics = ref.watch(serverDownloadDiagnosticsProvider);
   return Stream.periodic(const Duration(seconds: 5))
-      .asyncMap((_) => repository.getDownloadStatus());
+      .asyncMap((_) => repository.getDownloadStatus())
+      .map((status) {
+    diagnostics.snapshot(status);
+    return status;
+  });
 });
 
 @riverpod
@@ -95,6 +187,7 @@ class DownloadsMap extends _$DownloadsMap {
     final downloadStatusDto = await ref
         .read(downloadsRepositoryProvider)
         .reorderDownload(chapterId, to);
+    ref.read(serverDownloadDiagnosticsProvider).snapshot(downloadStatusDto);
     state = getStateFromUpdates(downloadStatusDto);
   }
 

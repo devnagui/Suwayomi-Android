@@ -1362,5 +1362,7 @@
     "cancelMangaUpdate": "Cancel update",
     "cancelMangaUpdateUnsupported": "This server does not support cancelling one manga. Update the server or use Cancel all updates.",
     "authTypeBasicLegacy": "Basic Auth (legacy)",
-    "authTypeBasicLegacyDescription": "For older server setups only. Use UI Login when the server is configured for UI Login."
+    "authTypeBasicLegacyDescription": "For older server setups only. Use UI Login when the server is configured for UI Login.",
+    "saveOnDevice": "Save on device",
+    "offlineCacheFailed": "Could not save chapter on this device. Retry from the chapter or check the operation log."
 }
