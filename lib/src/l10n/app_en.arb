@@ -1,5 +1,22 @@
 {
     "@@locale": "en",
+    "readAheadTitle": "Prepare next chapters",
+    "readAheadDescription": "Automatically prepare the next 3 chapters on this device while reading, one at a time, with retries.",
+    "readAheadWaiting": "Waiting for its turn",
+    "readAheadRequesting": "Requesting from server",
+    "readAheadDownloading": "Downloading on server",
+    "readAheadCopying": "Saving to device",
+    "readAheadRetrying": "Waiting to retry",
+    "readAheadPaused": "Paused — waiting for downloads to resume",
+    "readAheadReady": "Ready on device",
+    "readAheadFailed": "Could not prepare chapter",
+    "readAheadCancelled": "Preparation cancelled",
+    "readAheadAttempt": "Attempt {attempt}",
+    "@readAheadAttempt": {
+        "description": "Current attempt number for automatic chapter preparation",
+        "placeholders": {"attempt": {"type": "int"}}
+    },
+    "readAheadSettingSaveFailed": "Could not save this setting. Please try again.",
     "activity": "Activity",
     "@activity": {
         "description": "Navigation destination and screen title combining Updates and Downloads"

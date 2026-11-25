@@ -152,6 +152,7 @@ class MangaBookRepository {
       if (result != null) {
         await cache.put(cacheKey, result.toJson());
       }
+
       return result;
     } catch (_) {
       final cached = await cache.get(cacheKey);
@@ -161,6 +162,14 @@ class MangaBookRepository {
       rethrow;
     }
   }
+
+  Future<ChapterDto?> getChapterFromServer({required int chapterId}) => client
+      .query$GetChapter(Options$Query$GetChapter(
+        operationName: 'GetChapter',
+        fetchPolicy: FetchPolicy.networkOnly,
+        variables: Variables$Query$GetChapter(id: chapterId),
+      ))
+      .getData((data) => data.chapter);
 
   Future<ChapterPagesDto?> getChapterPages({
     required int chapterId,

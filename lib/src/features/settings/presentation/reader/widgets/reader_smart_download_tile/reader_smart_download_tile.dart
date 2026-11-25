@@ -9,9 +9,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../global_providers/global_providers.dart';
+import '../../../../../../utils/extensions/custom_extensions.dart';
 
-/// Whether to automatically cache the next chapter on the device while the
-/// user is reading the current one.
+/// Whether to prepare the next three chapters on the device, one at a time
+/// with retries, while the user reads the current one.
 ///
 /// Implemented as a manual [NotifierProvider] (no code generation) so it can be
 /// added without running build_runner. Persisted in [SharedPreferences] under
@@ -24,10 +25,11 @@ class SmartDownloadNextChapter extends Notifier<bool> {
         DBKeys.smartDownloadNextChapter.initial as bool;
   }
 
-  void update(bool value) {
-    ref
+  Future<void> update(bool value) async {
+    final saved = await ref
         .read(sharedPreferencesProvider)
         .setBool(DBKeys.smartDownloadNextChapter.name, value);
+    if (!saved) throw StateError('Setting persistence failed');
     state = value;
   }
 }
@@ -45,11 +47,20 @@ class ReaderSmartDownloadTile extends ConsumerWidget {
     return SwitchListTile(
       controlAffinity: ListTileControlAffinity.trailing,
       secondary: const Icon(Icons.download_for_offline_outlined),
-      title: const Text('Smart download'),
-      subtitle: const Text(
-        'Automatically cache the next chapter on this device while reading',
-      ),
-      onChanged: ref.read(smartDownloadNextChapterProvider.notifier).update,
+      title: Text(context.l10n.readAheadTitle),
+      subtitle: Text(context.l10n.readAheadDescription),
+      onChanged: (value) async {
+        try {
+          await ref
+              .read(smartDownloadNextChapterProvider.notifier)
+              .update(value);
+        } catch (_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.readAheadSettingSaveFailed)),
+          );
+        }
+      },
       value: ref.watch(smartDownloadNextChapterProvider),
     );
   }

@@ -79,11 +79,11 @@ These are the versions of [Suwayomi-Server][suwayomi-server] that Sorayomi suppo
 Build this fork with `flutter build apk --release`. The APK is written to
 `build/app/outputs/flutter-apk/app-release.apk`.
 
-Version 0.6.11 retains hourly offline caching, structured diagnostics and the
-chapter-list/swipe fixes, adding incremental chapter sync and unified Activity
-navigation. To build its
+Version 0.6.12 retains hourly offline caching, structured diagnostics,
+incremental chapter sync and Activity navigation, adding serialized automatic
+reader read-ahead and manga-summary progress. To build its
 ARM64 upgrade APK, use `flutter build apk --release --split-per-abi
---target-platform android-arm64`. The ARM64 APK has version code 2008 and is
+--target-platform android-arm64`. The ARM64 APK has version code 2009 and is
 written to `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
 Use the existing signing identity and install as an update; do not uninstall
 the app or clear its data to replace an APK.
@@ -127,6 +127,24 @@ published release of this fork.
     horizontal page swipes. Tap navigation, the page slider, vertical/webtoon
     scrolling, pinch zoom, and panning a zoomed page remain available.
     **Last page swipe** does not override disabled horizontal swiping.
+  - **Smart downloads** prepares the next three chapters once the current
+    chapter has readable pages. For example, reading 84 prepares 85, 86 and 87.
+    It uses the unfiltered chapter sequence, supports fractional chapters,
+    and prefers the current scanlator among duplicate chapter numbers.
+    One chapter is requested on the server, verified downloaded, and copied
+    through the existing serialized device queue before the next is requested.
+    Server/device-cached chapters are reused; repeated reader builds and a
+    lost enqueue response do not duplicate work. The summary shows waiting,
+    server progress, device progress, retry attempts, paused and ready states,
+    including when chapter rows are hidden by filters or lazy loading.
+    Three application attempts use 30/60-second backoff; persistent failure
+    stops the window until **Retry** or a new reading window. These are in
+    addition to the server/device workers' existing internal retry limits.
+    Unrelated queued work is allowed to finish first, and paused pending server
+    work is not automatically resumed. Existing manual cache exclusions and
+    explicit smart-download disable settings are respected. Fresh/unset
+    preferences enable this feature; disabling it cancels pending read-ahead,
+    without deleting files or stopping already submitted server work.
   - Chapter selection actions on manga details and Updates reserve their own
     space above Android's navigation buttons/gesture area. The action surface
     is opaque and wraps on narrow displays rather than covering chapter rows.

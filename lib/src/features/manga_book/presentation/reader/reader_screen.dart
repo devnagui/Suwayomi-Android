@@ -13,7 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/network/local_download_queue.dart';
+import '../../../../utils/network/reader_read_ahead.dart';
 import '../../../history/presentation/history_controller.dart';
 import '../../../settings/presentation/reader/widgets/reader_ignore_safe_area_tile/reader_ignore_safe_area_tile.dart';
 import '../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
@@ -54,29 +54,23 @@ class ReaderScreen extends HookConsumerWidget {
     );
     final offlineFiles = offlinePagesAsync.valueOrNull;
 
-    // Smart download: while reading, pre-cache the next chapter on the device.
     final smartDownloadEnabled = ref.watch(smartDownloadNextChapterProvider);
-    final nextChapterId = ref
-        .watch(
-          getNextAndPreviousChaptersProvider(
-            mangaId: mangaId,
-            chapterId: chapterId,
-          ),
-        )
-        ?.first
-        ?.id;
-    final chapterPagesLoaded = chapterPages.valueOrNull != null;
+    final chapterPagesLoaded =
+        chapterPages.valueOrNull?.pages.isNotEmpty == true ||
+            offlineFiles?.isNotEmpty == true;
     useEffect(() {
       if (!smartDownloadEnabled) return null;
-      if (nextChapterId == null || !chapterPagesLoaded) return null;
-      // Defer so we don't enqueue during the first build frame.
+      if (!chapterPagesLoaded) return null;
+      var active = true;
       Future.microtask(() {
-        ref
-            .read(localDownloadQueueProvider.notifier)
-            .enqueue(mangaId, nextChapterId);
+        if (active) {
+          unawaited(ref
+              .read(readerReadAheadProvider.notifier)
+              .request(mangaId, chapterId));
+        }
       });
-      return null;
-    }, [smartDownloadEnabled, nextChapterId, chapterPagesLoaded]);
+      return () => active = false;
+    }, [smartDownloadEnabled, mangaId, chapterId, chapterPagesLoaded]);
 
     final debounce = useRef<Timer?>(null);
 

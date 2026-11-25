@@ -54,7 +54,7 @@ enum DBKeys {
   volumeTapInvert(false),
   hideEmptyCategory(false),
   pinchToZoom(true),
-  smartDownloadNextChapter(false),
+  smartDownloadNextChapter(true),
   readerIgnoreSafeArea(false),
   flexScheme(FlexScheme.material),
   historyEnabled(true),
