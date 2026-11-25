@@ -160,6 +160,45 @@ void main() {
     expect(container.read(readerScrollPhysicsProvider(Axis.vertical)), isNull);
   });
 
+  testWidgets('disabled lateral swipes do not advance a vertical reader',
+      (tester) async {
+    var next = 0;
+    var previous = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: DirectionalSwipeGestureHandler(
+        onTap: () {},
+        onLongPressStart: (_) {},
+        onLongPressEnd: (_) {},
+        onLongPressMoveUpdate: (_) {},
+        scrollDirection: Axis.vertical,
+        readerSwipeChapterToggle: false,
+        lastPageSwipeEnabled: true,
+        resolvedReaderMode: ReaderMode.singleVertical,
+        currentIndex: 0,
+        chapterPages: Fragment$ChapterPagesDto(
+          chapter: Fragment$ChapterPagesDto$chapter(id: 1, pageCount: 1),
+          pages: ['page'],
+        ),
+        mangaId: 1,
+        prevNextChapterPair: null,
+        onNextPage: () => next++,
+        onPreviousPage: () => previous++,
+        pageController: null,
+        child: const SizedBox.expand(
+          child: ColoredBox(color: Colors.blue),
+        ),
+      ),
+    ));
+    await tester.fling(find.byType(DirectionalSwipeGestureHandler),
+        const Offset(-250, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(next, 0);
+    await tester.fling(find.byType(DirectionalSwipeGestureHandler),
+        const Offset(250, 0), 1000);
+    await tester.pumpAndSettle();
+    expect([next, previous], [0, 0]);
+  });
+
   for (final lastPageSwipeEnabled in [false, true]) {
     testWidgets(
         'disabled swipes preserve taps/zoom with last-page swipe=$lastPageSwipeEnabled',
