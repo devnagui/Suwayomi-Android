@@ -10,6 +10,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../constants/db_keys.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../utils/network/reading_progress.dart';
 import '../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../data/history_repository.dart';
 import '../domain/history_group.dart';
@@ -71,6 +72,11 @@ class ReadingHistory extends _$ReadingHistory {
     final chapterToRemove =
         currentItems.where((item) => item.id == chapterId).firstOrNull;
 
+    if (ref.exists(readingProgressProvider)) {
+      await ref
+          .read(readingProgressProvider.notifier)
+          .discardChapters({chapterId});
+    }
     await ref
         .read(historyRepositoryProvider)
         .removeChapterFromHistory(chapterId);

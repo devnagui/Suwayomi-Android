@@ -17,6 +17,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_external_url.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/network/reading_progress.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
@@ -45,9 +46,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
 
     final manga = ref.watch(mangaProvider);
     final filteredChapterList = ref.watch(chapterListFilteredProvider);
-    final firstUnreadChapter = ref.watch(
-      firstUnreadInFilteredChapterListProvider(mangaId: mangaId),
-    );
+    final resumeChapter = ref.watch(mangaResumeChapterProvider(mangaId));
+    final localProgress = ref
+        .watch(readingProgressProvider.select((entries) => entries[mangaId]));
 
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final isRefreshing = useState(false);
@@ -282,44 +283,53 @@ class MangaDetailsScreen extends HookConsumerWidget {
                 )
               : null,
           floatingActionButton:
-              firstUnreadChapter != null && selectedChapters.value.isEmpty
+              resumeChapter != null && selectedChapters.value.isEmpty
                   ? FloatingActionButton.extended(
                       isExtended: context.isTablet,
                       label: Text(
-                        data?.lastReadChapter?.index != null
+                        localProgress != null ||
+                                chapterReadAtMs(data?.lastReadChapter) > 0
                             ? context.l10n.resume
                             : context.l10n.start,
                       ),
                       icon: const Icon(Icons.play_arrow_rounded),
                       onPressed: () {
                         ReaderRoute(
-                          mangaId: firstUnreadChapter.mangaId,
-                          chapterId: firstUnreadChapter.id,
+                          mangaId: resumeChapter.mangaId,
+                          chapterId: resumeChapter.id,
                           showReaderLayoutAnimation: true,
                         ).push(context);
                       },
                     )
                   : null,
           body: data != null
-              ? context.isTablet
-                  ? BigScreenMangaDetails(
-                      chapterList: filteredChapterList,
-                      manga: data,
-                      mangaId: mangaId,
-                      onRefresh: refresh,
-                      onDescriptionRefresh: mangaRefresh,
-                      onListRefresh: chapterListRefresh,
-                      selectedChapters: selectedChapters,
-                    )
-                  : SmallScreenMangaDetails(
-                      chapterList: filteredChapterList,
-                      manga: data,
-                      mangaId: mangaId,
-                      onRefresh: refresh,
-                      onDescriptionRefresh: mangaRefresh,
-                      onListRefresh: chapterListRefresh,
-                      selectedChapters: selectedChapters,
-                    )
+              ? Column(children: [
+                  if (localProgress?.pending == true)
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(context.l10n.readingProgressPending),
+                    ),
+                  Expanded(
+                      child: context.isTablet
+                          ? BigScreenMangaDetails(
+                              chapterList: filteredChapterList,
+                              manga: data,
+                              mangaId: mangaId,
+                              onRefresh: refresh,
+                              onDescriptionRefresh: mangaRefresh,
+                              onListRefresh: chapterListRefresh,
+                              selectedChapters: selectedChapters,
+                            )
+                          : SmallScreenMangaDetails(
+                              chapterList: filteredChapterList,
+                              manga: data,
+                              mangaId: mangaId,
+                              onRefresh: refresh,
+                              onDescriptionRefresh: mangaRefresh,
+                              onListRefresh: chapterListRefresh,
+                              selectedChapters: selectedChapters,
+                            )),
+                ])
               : Emoticons(
                   title: context.l10n.noMangaFound,
                   button: TextButton(

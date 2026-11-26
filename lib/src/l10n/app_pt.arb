@@ -1,5 +1,7 @@
 {
   "@@locale": "pt",
+  "readingProgressPending": "Posição de leitura salva neste aparelho; aguardando sincronização.",
+  "readingProgressSaveFailed": "Não foi possível salvar sua posição de leitura. Tente novamente.",
   "readAheadTitle": "Preparar próximos capítulos",
   "readAheadDescription": "Prepara automaticamente os próximos 3 capítulos neste dispositivo durante a leitura, um de cada vez, com novas tentativas.",
   "readAheadWaiting": "Aguardando a sua vez",

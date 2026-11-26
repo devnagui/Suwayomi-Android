@@ -15,6 +15,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
+import '../../../../../../utils/network/reading_progress.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_scroll_animation_tile/reader_scroll_animation_tile.dart';
@@ -68,11 +69,12 @@ class ContinuousReaderMode extends HookConsumerWidget {
     final ItemPositionsListener positionsListener =
         useMemoized(() => ItemPositionsListener.create());
 
-    final ValueNotifier<int> currentIndex = useState(
-      chapter.isRead.ifNull()
-          ? 0
-          : (chapter.lastPageRead).getValueOnNullOrNegative(),
-    );
+    final initialPage = ref
+        .read(readingProgressProvider.notifier)
+        .startingPage(chapter)
+        .clamp(
+            0, chapterPages.pages.isEmpty ? 0 : chapterPages.pages.length - 1);
+    final ValueNotifier<int> currentIndex = useState(initialPage);
 
     // Passive position tracking that doesn't interfere with scrolling
     final ObjectRef<Timer?> positionUpdateTimer = useRef<Timer?>(null);
@@ -189,9 +191,7 @@ class ContinuousReaderMode extends HookConsumerWidget {
         ScrollablePositionedList.separated(
           itemScrollController: scrollController,
           itemPositionsListener: positionsListener,
-          initialScrollIndex: chapter.isRead.ifNull()
-              ? 0
-              : chapter.lastPageRead.getValueOnNullOrNegative(),
+          initialScrollIndex: initialPage,
           scrollDirection: scrollDirection,
           reverse: reverse,
           physics: ref.watch(readerScrollPhysicsProvider(scrollDirection)),

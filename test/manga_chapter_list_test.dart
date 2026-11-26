@@ -146,6 +146,28 @@ void main() {
     expect(requests, 2);
   });
 
+  test(
+      'opening a chapter refreshes its server position instead of a stale query',
+      () async {
+    var requests = 0;
+    final container = containerFor(Link.function((request, [forward]) async* {
+      requests++;
+      final fresh = chapter(84).copyWith(
+          user: chapter(84).user.copyWith(
+                lastPageRead: requests == 1 ? 1 : 7,
+                lastReadAt: '${2000000000 + requests}',
+              ));
+      yield Response(response: const {}, data: {
+        '__typename': 'Query',
+        'chapter': fresh.toJson(),
+      });
+    }));
+    final repository = container.read(mangaBookRepositoryProvider);
+    expect((await repository.getChapter(chapterId: 84))?.lastPageRead, 1);
+    expect((await repository.getChapter(chapterId: 84))?.lastPageRead, 7);
+    expect(requests, 2);
+  });
+
   test('chapter-filter diagnostics remain visible in structured logs',
       () async {
     final container = containerFor(Link.function((request, [forward]) async* {

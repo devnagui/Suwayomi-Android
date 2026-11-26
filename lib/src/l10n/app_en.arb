@@ -1,5 +1,7 @@
 {
     "@@locale": "en",
+    "readingProgressPending": "Reading position saved on this device; waiting to sync.",
+    "readingProgressSaveFailed": "Could not save your reading position. Please try again.",
     "readAheadTitle": "Prepare next chapters",
     "readAheadDescription": "Automatically prepare the next 3 chapters on this device while reading, one at a time, with retries.",
     "readAheadWaiting": "Waiting for its turn",

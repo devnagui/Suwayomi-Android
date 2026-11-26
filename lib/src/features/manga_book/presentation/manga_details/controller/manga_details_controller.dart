@@ -12,12 +12,31 @@ import '../../../../../constants/enum.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/logger/operation_log.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../../utils/network/reading_progress.dart';
 import '../../../../library/domain/category/category_model.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
 
 part 'manga_details_controller.g.dart';
+
+final mangaResumeChapterProvider =
+    Provider.autoDispose.family<ChapterDto?, int>((ref, mangaId) {
+  final manga = ref.watch(mangaWithIdProvider(mangaId: mangaId)).valueOrNull;
+  final chapters =
+      ref.watch(mangaChapterListProvider(mangaId: mangaId)).valueOrNull;
+  final local = ref.watch(readingProgressProvider.select((p) => p[mangaId]));
+  final remote = chapterReadAtMs(manga?.lastReadChapter) > 0
+      ? manga?.lastReadChapter
+      : null;
+  final localExists = local != null &&
+      (chapters == null ||
+          chapters.any(
+              (c) => c.id == local.chapter.id && c.url == local.chapter.url));
+  if (localExists && useLocalReading(local, remote)) return local.chapter;
+  if (remote != null) return remote;
+  return ref.watch(firstUnreadInFilteredChapterListProvider(mangaId: mangaId));
+});
 
 @riverpod
 class MangaWithId extends _$MangaWithId {
@@ -225,6 +244,7 @@ ChapterDto? firstUnreadInFilteredChapterList(
   } else {
     final current =
         filteredList.indexWhere((element) => element.id == chapterId);
+    if (current < 0) return null;
     final prevChapter = current > 0 ? filteredList[current - 1] : null;
     final nextChapter =
         current < (filteredList.length - 1) ? filteredList[current + 1] : null;

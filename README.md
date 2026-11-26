@@ -79,12 +79,12 @@ These are the versions of [Suwayomi-Server][suwayomi-server] that Sorayomi suppo
 Build this fork with `flutter build apk --release`. The APK is written to
 `build/app/outputs/flutter-apk/app-release.apk`.
 
-Version 0.6.13 retains hourly offline caching, structured diagnostics,
-incremental sync, Activity navigation and serialized reader read-ahead,
-with rotation-safe swipe controls and verified resumable device downloads.
+Version 0.6.14 retains hourly offline caching, structured diagnostics,
+incremental sync, Activity navigation, serialized read-ahead, rotation fixes
+and verified resumable downloads, adding durable reading-position sync.
 To build its
 ARM64 upgrade APK, use `flutter build apk --release --split-per-abi
---target-platform android-arm64`. The ARM64 APK has version code 2010 and is
+--target-platform android-arm64`. The ARM64 APK has version code 2011 and is
 written to `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
 Use the existing signing identity and install as an update; do not uninstall
 the app or clear its data to replace an APK.
@@ -96,6 +96,25 @@ published release of this fork.
 ## Post installation
 
   - Configure your server address in `Navigation bar > more screen > Server URL`.
+  - **Reading position** is saved on the device before network synchronization,
+    including the first page, re-reading completed chapters and moving backwards.
+    Page/chapter history is kept separately for each configured server and
+    signed-in account; no tokens/passwords are stored in the reading journal.
+    Pending chapter positions survive app restarts and replay in reading-time
+    order, so the latest reading event, not the largest chapter number, wins.
+    Network writes are serialized/debounced, flushed on reader exit/app pause,
+    retried while foregrounded and on startup/resume/reconnect.
+    **Continue** prefers the latest local/server reading independently of
+    chapter filters, and readers restore its page instead of stale query data.
+    A pending message remains visible until the existing server API acknowledges
+    the update. Server reads before replay are network-only; newer server
+    history supersedes older pending device positions instead of being overwritten.
+    No HA server code/version/configuration changes are required.
+    The unchanged server API stamps its own receipt time and has no atomic
+    compare-and-set: simultaneous device writes, clock skew and same-second
+    timestamps cannot be resolved perfectly by Android alone. Equal timestamps
+    prefer the local reading; acknowledged server positions are retained for
+    conflict checks. Pending reading data is not part of disposable query caches.
   - Manga chapter lists load the chapters already stored on the server, without
     requiring the source website to respond. After the first full load,
     reopening manga details checks a lightweight server ID/status/order index

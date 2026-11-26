@@ -12,6 +12,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import 'features/history/presentation/history_controller.dart';
+import 'features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_selector.dart';
 import 'features/settings/presentation/appearance/widgets/is_true_black/is_true_black_tile.dart';
 import 'features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
@@ -26,6 +28,7 @@ import 'utils/network/connectivity_provider.dart';
 import 'utils/network/hourly_offline_cache.dart';
 import 'utils/network/local_download_queue.dart';
 import 'utils/network/offline_chapter_manager.dart';
+import 'utils/network/reading_progress.dart';
 import 'utils/network/token_manager.dart';
 
 class Sorayomi extends ConsumerStatefulWidget {
@@ -68,6 +71,7 @@ class _SorayomiState extends ConsumerState<Sorayomi>
       return;
     }
     _workerStarted = true;
+    ref.read(readingProgressProvider.notifier).setForeground(_foreground);
     ref.read(localDownloadQueueProvider.notifier).setForeground(_foreground);
   }
 
@@ -76,6 +80,9 @@ class _SorayomiState extends ConsumerState<Sorayomi>
     if (state == AppLifecycleState.resumed) {
       unawaited(reportHourlyOfflineCache(ref.read(sharedPreferencesProvider)));
       ref.invalidate(isChapterOfflineProvider);
+      ref.invalidate(mangaWithIdProvider);
+      ref.invalidate(mangaChapterListProvider);
+      ref.invalidate(readingHistoryProvider);
     }
     _catchUp();
   }
@@ -115,21 +122,24 @@ class _SorayomiState extends ConsumerState<Sorayomi>
     // rebuilding the whole app on each page's progress update.
     if (enabled) {
       ref.listen(localDownloadQueueProvider, (previous, next) {
-      if (next.entries.any((entry) =>
-          entry.value.status == LocalCacheStatus.failed &&
-          previous?[entry.key]?.status != LocalCacheStatus.failed)) {
-        final context = rootNavigatorKey.currentContext;
-        if (context != null) {
-          ref.read(toastProvider)?.showError(context.l10n.offlineCacheFailed);
+        if (next.entries.any((entry) =>
+            entry.value.status == LocalCacheStatus.failed &&
+            previous?[entry.key]?.status != LocalCacheStatus.failed)) {
+          final context = rootNavigatorKey.currentContext;
+          if (context != null) {
+            ref.read(toastProvider)?.showError(context.l10n.offlineCacheFailed);
+          }
         }
-      }
       });
       ref.listen(connectivityStatusProvider, (previous, next) {
-      if (previous == false && next) _catchUp();
+        if (previous == false && next) _catchUp();
       });
     }
     ref.listen(graphQlClientProvider, (_, __) {
       // Signing in or changing the server must retry an initial failed scan.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _catchUp());
+    });
+    ref.listen(readingProgressScopeProvider, (_, __) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _catchUp());
     });
     final routes = ref.watch(routerConfigProvider);

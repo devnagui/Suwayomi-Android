@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/network/reading_progress.dart';
 import '../../../../widgets/async_buttons/async_icon_button.dart';
 import '../../data/manga_book/manga_book_repository.dart';
 import '../../domain/chapter/chapter_model.dart';
@@ -36,6 +37,12 @@ class MultiChaptersActionIcon extends ConsumerWidget {
       onPressed: () async {
         final result = await AsyncValue.guard(
           () async {
+            if ((change.isRead != null || change.lastPageRead != null) &&
+                ref.exists(readingProgressProvider)) {
+              await ref
+                  .read(readingProgressProvider.notifier)
+                  .discardChapters(chapterList.toSet());
+            }
             final chapters =
                 await ref.read(mangaBookRepositoryProvider).modifyBulkChapters(
                       ChapterBatch(

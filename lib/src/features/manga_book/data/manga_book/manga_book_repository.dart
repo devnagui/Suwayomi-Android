@@ -93,6 +93,14 @@ class MangaBookRepository {
         )),
       ).getData((data) => data.manga);
 
+  Future<MangaDto?> getMangaFromServer({required int mangaId}) => client
+      .query$GetManga(Options$Query$GetManga(
+        operationName: 'GetManga',
+        variables: Variables$Query$GetManga(id: mangaId),
+        fetchPolicy: FetchPolicy.networkOnly,
+      ))
+      .getData((data) => data.manga);
+
   Future<List<CategoryDto>?> getMangaCategoryList({
     required int mangaId,
   }) async =>
@@ -137,17 +145,16 @@ class MangaBookRepository {
   Future<ChapterDto?> getChapter({
     required int chapterId,
   }) async {
-    final cache = MutationCache();
+    final cache = _cache ?? MutationCache();
     final cacheKey = 'chapter_$chapterId';
     try {
-      final result = await client
-          .query$GetChapter(
-            Options$Query$GetChapter(
-              variables: Variables$Query$GetChapter(
-                id: chapterId,
-              ),
-            ),
-          )
+      final result = await networkFirstQuery(
+        (policy) => client.query$GetChapter(Options$Query$GetChapter(
+          operationName: 'GetChapter',
+          fetchPolicy: policy,
+          variables: Variables$Query$GetChapter(id: chapterId),
+        )),
+      )
           .getData((data) => data.chapter);
       if (result != null) {
         await cache.put(cacheKey, result.toJson());
