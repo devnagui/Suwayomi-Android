@@ -74,11 +74,14 @@ void main() {
 
   test('registers unique hourly Wi-Fi work without requiring charging',
       () async {
+    // Construct before installing the fake: Workmanager selects its host
+    // implementation on first use (Linux in CI, unlike Windows locally).
+    final workmanager = Workmanager();
     final previous = WorkmanagerPlatform.instance;
     final scheduler = RecordingScheduler();
     WorkmanagerPlatform.instance = scheduler;
     addTearDown(() => WorkmanagerPlatform.instance = previous);
-    await scheduleHourlyOfflineCache(true, scheduler: Workmanager());
+    await scheduleHourlyOfflineCache(true, scheduler: workmanager);
     expect(scheduler.uniqueName, hourlyOfflineCacheTask);
     expect(scheduler.frequency, const Duration(hours: 1));
     expect(scheduler.policy, ExistingPeriodicWorkPolicy.keep);
@@ -86,7 +89,7 @@ void main() {
     expect(scheduler.constraints?.requiresBatteryNotLow, isTrue);
     expect(scheduler.constraints?.requiresStorageNotLow, isTrue);
     expect(scheduler.constraints?.requiresCharging, isNot(true));
-    await scheduleHourlyOfflineCache(false, scheduler: Workmanager());
+    await scheduleHourlyOfflineCache(false, scheduler: workmanager);
     expect(scheduler.cancelled, hourlyOfflineCacheTask);
   });
 
