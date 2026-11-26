@@ -77,15 +77,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => OperationLog.instance.clear());
 
-  test('ERROR initial/snapshot/update coalesce, preserving attempts and unknown cause',
+  test(
+      'ERROR initial/snapshot/update coalesce, preserving attempts and unknown cause',
       () {
     final log = OperationLog();
     final diagnostics = ServerDownloadDiagnostics(log: log);
     final failed = download();
     diagnostics.snapshot(snapshot(failed));
     diagnostics.subscription(subscription(failed));
-    diagnostics.subscription(
-        subscription(failed, event: DownloadUpdateType.ERROR));
+    diagnostics
+        .subscription(subscription(failed, event: DownloadUpdateType.ERROR));
     diagnostics.snapshot(snapshot(failed));
 
     final event = events(log).single;
@@ -106,7 +107,8 @@ void main() {
     expect(events(log).last['attempt'], 4);
   });
 
-  test('state and terminal events retained without snapshot or fine progress spam',
+  test(
+      'state and terminal events retained without snapshot or fine progress spam',
       () {
     final log = OperationLog();
     final diagnostics = ServerDownloadDiagnostics(log: log);
@@ -137,9 +139,10 @@ void main() {
     final stream = StreamController<DownloadUpdatesDto?>();
     addTearDown(stream.close);
     final client = GraphQLClient(
-        cache: GraphQLCache(), link: Link.function((_, [__]) => const Stream.empty()));
-    final repository =
-        DiagnosticDownloadsRepository(client, stream.stream, snapshot(download()));
+        cache: GraphQLCache(),
+        link: Link.function((_, [__]) => const Stream.empty()));
+    final repository = DiagnosticDownloadsRepository(
+        client, stream.stream, snapshot(download()));
     final container = ProviderContainer(overrides: [
       downloadsRepositoryProvider.overrideWithValue(repository),
     ]);
@@ -162,9 +165,10 @@ void main() {
       (tester) async {
     final stream = StreamController<DownloadUpdatesDto?>();
     final client = GraphQLClient(
-        cache: GraphQLCache(), link: Link.function((_, [__]) => const Stream.empty()));
-    final repository =
-        DiagnosticDownloadsRepository(client, stream.stream, snapshot(download()));
+        cache: GraphQLCache(),
+        link: Link.function((_, [__]) => const Stream.empty()));
+    final repository = DiagnosticDownloadsRepository(
+        client, stream.stream, snapshot(download()));
     final container = ProviderContainer(overrides: [
       downloadsRepositoryProvider.overrideWithValue(repository),
     ]);
@@ -183,7 +187,8 @@ void main() {
     await tester.pump();
   });
 
-  test('catch-up distinguishes candidates, copies, already cached and exclusions',
+  test(
+      'catch-up distinguishes candidates, copies, already cached and exclusions',
       () async {
     final harness = CacheHarness(
         (_) => candidatePage([candidate(1), candidate(2), candidate(3)]),
@@ -191,8 +196,8 @@ void main() {
     addTearDown(harness.dispose);
     await harness.queue.cancel(3);
     expect(await harness.queue.reconcile(), isTrue);
-    final summary =
-        events().lastWhere((event) => event['operation'] == 'OfflineCacheCatchUp');
+    final summary = events()
+        .lastWhere((event) => event['operation'] == 'OfflineCacheCatchUp');
     expect(summary['stage'], 'device_cache');
     expect(summary['count'], 3);
     expect(summary['copied'], 1);
@@ -202,8 +207,15 @@ void main() {
     expect(harness.manager.copies, [2]);
     final chapterEvents =
         events().where((event) => event['operation'] == 'OfflineChapterCache');
-    expect(chapterEvents.map((event) => event['outcome']),
-        containsAll(['already_on_device', 'queued', 'started', 'completed', 'excluded']));
+    expect(
+        chapterEvents.map((event) => event['outcome']),
+        containsAll([
+          'already_on_device',
+          'queued',
+          'started',
+          'completed',
+          'excluded'
+        ]));
     await harness.queue.reconcile();
     final noOp = events().last;
     expect(noOp['copied'], 0);
@@ -257,13 +269,13 @@ void main() {
     expect(summary['failed'], 0);
   });
 
-
   group('local failures', () {
     late Directory directory;
     late SharedPreferences preferences;
 
     setUp(() async {
-      directory = await Directory.systemTemp.createTemp('download-diagnostics-');
+      directory =
+          await Directory.systemTemp.createTemp('download-diagnostics-');
       SharedPreferences.setMockInitialValues({
         DBKeys.serverUrl.name: 'http://server.test',
         DBKeys.serverPortToggle.name: false,
@@ -273,23 +285,26 @@ void main() {
     tearDown(() async => directory.delete(recursive: true));
 
     CacheHarness harness(http.Client media,
-            {Future<Directory> Function()? documentsDirectory}) {
+        {Future<Directory> Function()? documentsDirectory}) {
       addTearDown(media.close);
-      final result = CacheHarness(
-          (_) => candidatePage([candidate(4991)]),
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(preferences),
-            serverMediaHttpClientProvider.overrideWithValue(media),
-            offlineChapterManagerProvider.overrideWith((ref) =>
-                OfflineChapterManager(ref,
-                    documentsDirectory:
-                        documentsDirectory ?? () async => directory)),
-          ]);
+      final result =
+          CacheHarness((_) => candidatePage([candidate(4991)]), overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        serverMediaHttpClientProvider.overrideWithValue(media),
+        offlineChapterManagerProvider.overrideWith((ref) =>
+            OfflineChapterManager(
+                ref,
+                availableBytes: (_) async => 1 << 40,
+                imageValidator: (_) async {},
+                documentsDirectory:
+                    documentsDirectory ?? () async => directory)),
+      ]);
       addTearDown(result.dispose);
       return result;
     }
 
-    test('actual network cause, app stack, page counts survive queue retries safely',
+    test(
+        'actual network cause, app stack, page counts survive queue retries safely',
         () async {
       final cause = http.ClientException(
           'https://user:password@private.test/chapter?token=secret');
@@ -308,12 +323,14 @@ void main() {
         expect(event['reasonCode'], 'network_error');
         expect(event['errorType'], 'ClientException');
         expect((event['exception'] as Map)['type'], 'ClientException');
-        expect((event['exception'] as Map)['stack'],
-            ['package:tachidesk_sorayomi/src/utils/network/offline_chapter_manager.dart:222:7']);
+        expect((event['exception'] as Map)['stack'], [
+          'package:tachidesk_sorayomi/src/utils/network/offline_chapter_manager.dart:222:7'
+        ]);
         expect(event['completedPages'], 0);
         expect(event['totalPages'], 1);
       }
-      expect(events().where((event) => event['outcome'] == 'retry'), hasLength(2));
+      expect(
+          events().where((event) => event['outcome'] == 'retry'), hasLength(2));
       expect(events().last['failed'], 1);
       expect(events().last['copied'], 0);
       for (final secret in ['password', 'private.test', 'token=secret']) {
@@ -329,19 +346,20 @@ void main() {
           documentsDirectory: () async => throw cause);
       final manager = cache.container.read(offlineChapterManagerProvider);
       final progress = (await manager.downloadChapter(
-          mangaId: 197, chapterId: 4991, pageUrls: ['/page']).toList()).single;
+              mangaId: 197, chapterId: 4991, pageUrls: ['/page']).toList())
+          .single;
       expect(progress.cause, same(cause));
       expect(progress.stackTrace, isNotNull);
       expect(progress.reasonCode, 'disk_error');
       expect(progress.error, isNot(contains('secret')));
       await cache.queue.reconcile();
-      final failure = events()
-          .firstWhere((event) =>
-              event['operation'] == 'OfflineChapterCache' &&
-              event['outcome'] == 'failed');
+      final failure = events().firstWhere((event) =>
+          event['operation'] == 'OfflineChapterCache' &&
+          event['outcome'] == 'failed');
       expect(failure['errorType'], 'FileSystemException');
       expect(failure['reasonCode'], 'disk_error');
-      expect(OperationLog.instance.exportJson(), isNot(contains('private-path')));
+      expect(
+          OperationLog.instance.exportJson(), isNot(contains('private-path')));
     });
 
     for (final scenario in [
@@ -357,8 +375,9 @@ void main() {
         final progress = (await cache.container
                 .read(offlineChapterManagerProvider)
                 .downloadChapter(
-                    mangaId: 197, chapterId: 4991, pageUrls: ['/page'])
-                .toList())
+                    mangaId: 197,
+                    chapterId: 4991,
+                    pageUrls: ['/page']).toList())
             .last;
         expect(progress.reasonCode, scenario.reason);
         expect(progress.httpStatus, scenario.status);
@@ -373,15 +392,15 @@ void main() {
       final progress = (await cache.container
               .read(offlineChapterManagerProvider)
               .downloadChapter(
-                  mangaId: 197, chapterId: 4991, pageUrls: const [])
-              .toList())
+                  mangaId: 197, chapterId: 4991, pageUrls: const []).toList())
           .single;
       expect(progress.reasonCode, 'empty_pages');
       expect(progress.httpStatus, isNull);
     });
 
     for (final clearAll in [false, true]) {
-      test('in-flight ${clearAll ? 'clear' : 'exclusion'} keeps a distinct reason',
+      test(
+          'in-flight ${clearAll ? 'clear' : 'exclusion'} keeps a distinct reason',
           () async {
         late OfflineChapterManager manager;
         final cache = harness(MockClient((_) async {
@@ -394,8 +413,10 @@ void main() {
         }));
         manager = cache.container.read(offlineChapterManagerProvider);
         final progress = (await manager.downloadChapter(
-            mangaId: 197, chapterId: 4991, pageUrls: ['/page']).toList()).last;
-        expect(progress.reasonCode, clearAll ? 'cache_cleared' : 'cache_excluded');
+                mangaId: 197, chapterId: 4991, pageUrls: ['/page']).toList())
+            .last;
+        expect(
+            progress.reasonCode, clearAll ? 'cache_cleared' : 'cache_excluded');
         expect(progress.isComplete, isFalse);
         expect(await manager.isChapterAvailableOffline(197, 4991), isFalse);
       });

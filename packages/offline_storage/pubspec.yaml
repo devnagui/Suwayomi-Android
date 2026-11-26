@@ -1,0 +1,19 @@
+name: suwayomi_offline_storage
+description: Android app-private storage capacity for foreground and background downloads.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.3.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.suwayomi.offline_storage
+        pluginClass: OfflineStoragePlugin

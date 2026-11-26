@@ -591,6 +591,8 @@ void main() {
     final managerProvider = Provider((ref) => OfflineChapterManager(
           ref,
           documentsDirectory: () async => directory,
+          availableBytes: (_) async => 1 << 40,
+          imageValidator: (_) async {},
         ));
     final manager = container.read(managerProvider);
     final result = await manager.downloadChapter(

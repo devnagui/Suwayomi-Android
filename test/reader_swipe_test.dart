@@ -6,10 +6,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachidesk_sorayomi/src/constants/db_keys.dart';
 import 'package:tachidesk_sorayomi/src/constants/enum.dart';
 import 'package:tachidesk_sorayomi/src/features/manga_book/domain/chapter_page/graphql/__generated__/fragment.graphql.dart';
+import 'package:tachidesk_sorayomi/src/features/manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
+import 'package:tachidesk_sorayomi/src/features/manga_book/domain/manga/manga_model.dart';
+import 'package:tachidesk_sorayomi/src/features/manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import 'package:tachidesk_sorayomi/src/features/manga_book/presentation/reader/utils/reader_scroll_physics.dart';
 import 'package:tachidesk_sorayomi/src/features/manga_book/presentation/reader/widgets/directional_swipe_gesture_handler.dart';
+import 'package:tachidesk_sorayomi/src/features/manga_book/presentation/reader/widgets/reader_wrapper.dart';
 import 'package:tachidesk_sorayomi/src/features/settings/presentation/reader/widgets/reader_swipe_toggle_tile/reader_swipe_chapter_toggle_tile.dart';
 import 'package:tachidesk_sorayomi/src/global_providers/global_providers.dart';
+import 'package:tachidesk_sorayomi/src/graphql/__generated__/schema.graphql.dart';
+import 'package:tachidesk_sorayomi/src/l10n/generated/app_localizations.dart';
+
+import 'chapter_download_regression_test.dart' show chapter;
 
 void main() {
   Future<ProviderContainer> preferences(bool? enabled) async {
@@ -68,6 +76,19 @@ void main() {
         await tester.drag(find.byType(PageView), -forward);
         await tester.pumpAndSettle();
         expect(controller.page, axis == Axis.horizontal ? 1 : 0);
+
+        if (axis == Axis.horizontal) {
+          addTearDown(tester.view.reset);
+          tester.view.devicePixelRatio = 1;
+          for (final size in [const Size(390, 844), const Size(844, 390)]) {
+            tester.view.physicalSize = size;
+            await tester.pumpAndSettle();
+            await tester.drag(find.byType(PageView), const Offset(-200, 0));
+            await tester.pumpAndSettle();
+            expect(controller.page, 1,
+                reason: 'disabled page swipes stay disabled after rotation');
+          }
+        }
 
         controller.jumpToPage(1);
         await tester.pumpAndSettle();
@@ -160,6 +181,89 @@ void main() {
     expect(container.read(readerScrollPhysicsProvider(Axis.vertical)), isNull);
   });
 
+  testWidgets('phone rotation does not enable tablet chapter gestures',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      DBKeys.swipeToggle.name: false,
+      DBKeys.lastPageSwipeEnabled.name: true,
+      DBKeys.readerOverlay.name: false,
+      DBKeys.volumeTap.name: false,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      getNextAndPreviousChaptersProvider(mangaId: 37, chapterId: 1)
+          .overrideWith((ref) => null),
+    ]);
+    addTearDown(container.dispose);
+    addTearDown(tester.view.reset);
+    final manga = MangaDto(
+      genre: [],
+      id: 37,
+      initialized: true,
+      meta: [],
+      sourceId: '1',
+      status: Enum$MangaStatus.ONGOING,
+      title: 'Manga',
+      user: Fragment$MangaDto$user(
+        inLibrary: true,
+        inLibraryAt: '0',
+        unreadCount: 3,
+        downloadCount: 0,
+      ),
+      updateStrategy: Enum$UpdateStrategy.ALWAYS_UPDATE,
+      url: '/manga/37',
+    );
+    var advances = 0;
+    final scrollController = ScrollController();
+    addTearDown(scrollController.dispose);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrimaryScrollController(
+          controller: scrollController,
+          child: ReaderWrapper(
+            manga: manga,
+            chapter: chapter(1),
+            currentIndex: 0,
+            chapterPages: Fragment$ChapterPagesDto(
+              chapter: Fragment$ChapterPagesDto$chapter(id: 1, pageCount: 3),
+              pages: ['one', 'two', 'three'],
+            ),
+            onChanged: (_) {},
+            onNext: () => advances++,
+            onPrevious: () {},
+            scrollDirection: Axis.vertical,
+            child: const SizedBox.expand(child: ColoredBox(color: Colors.blue)),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    for (final size in [
+      const Size(390, 844),
+      const Size(844, 390),
+      const Size(390, 844)
+    ]) {
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      final handler = tester.widget<DirectionalSwipeGestureHandler>(
+          find.byType(DirectionalSwipeGestureHandler));
+      expect(handler.readerSwipeChapterToggle, isFalse);
+      expect(handler.lastPageSwipeEnabled, isFalse,
+          reason: 'a landscape phone must not become a tablet');
+      await tester.fling(find.byType(DirectionalSwipeGestureHandler),
+          const Offset(-180, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(advances, 0);
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('disabled lateral swipes do not advance a vertical reader',
       (tester) async {
     var next = 0;
@@ -189,6 +293,15 @@ void main() {
         ),
       ),
     ));
+    final detector = tester.widget<GestureDetector>(find
+        .descendant(
+          of: find.byType(DirectionalSwipeGestureHandler),
+          matching: find.byType(GestureDetector),
+        )
+        .first);
+    expect(detector.onPanEnd, isNull,
+        reason: 'vertical edge gestures must not capture lateral drags');
+    expect(detector.onHorizontalDragEnd, isNull);
     await tester.fling(find.byType(DirectionalSwipeGestureHandler),
         const Offset(-250, 0), 1000);
     await tester.pumpAndSettle();

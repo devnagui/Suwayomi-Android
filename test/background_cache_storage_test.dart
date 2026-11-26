@@ -33,12 +33,20 @@ void main() {
   });
 
   tearDown(() async {
-    await directory.delete(recursive: true);
+    for (var attempt = 0; ; attempt++) {
+      try {
+        await directory.delete(recursive: true);
+        break;
+      } on FileSystemException catch (error) {
+        if (error.osError?.errorCode != 32 || attempt == 4) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
   });
 
   OfflineChapterManager manager({http.Client? client}) {
-    final media = client ??
-        MockClient((_) async => http.Response.bytes([1, 2, 3], 200));
+    final media =
+        client ?? MockClient((_) async => http.Response.bytes([1, 2, 3], 200));
     final container = ProviderContainer(overrides: [
       sharedPreferencesProvider.overrideWithValue(preferences),
       serverMediaHttpClientProvider.overrideWithValue(media),
@@ -48,6 +56,8 @@ void main() {
     final provider = Provider((ref) => OfflineChapterManager(
           ref,
           documentsDirectory: () async => directory,
+          availableBytes: (_) async => 1 << 40,
+          imageValidator: (_) async {},
         ));
     return container.read(provider);
   }
@@ -61,8 +71,9 @@ void main() {
 
   Future<void> seedLegacy(int chapterId, {int count = 1}) async {
     final raw = preferences.getString('offline_chapters_metadata');
-    final metadata =
-        raw == null ? <String, dynamic>{} : jsonDecode(raw) as Map<String, dynamic>;
+    final metadata = raw == null
+        ? <String, dynamic>{}
+        : jsonDecode(raw) as Map<String, dynamic>;
     metadata['7_$chapterId'] = {
       'mangaId': 7,
       'chapterId': chapterId,
@@ -88,15 +99,18 @@ void main() {
     expect(progress.last.error, isNot(contains('private URL')));
     expect(await cache.isChapterAvailableOffline(7, 10), isFalse);
     expect(await cache.getOfflinePages(7, 10), isNull);
+    final files = await Directory(p.join(directory.path, 'offline_manga'))
+        .list(recursive: true)
+        .where((entity) => entity is File)
+        .toList();
     expect(
-        await Directory(p.join(directory.path, 'offline_manga'))
-            .list(recursive: true)
-            .where((entity) => entity is File)
-            .toList(),
-        isEmpty);
+        files.every((file) => p.basename(file.path) == 'resume.json'), isTrue);
   });
 
-  for (final body in [<int>[], [1, 2]]) {
+  for (final body in [
+    <int>[],
+    [1, 2]
+  ]) {
     test('empty or truncated successful HTTP body cannot complete: $body',
         () async {
       final cache = manager(
@@ -109,7 +123,8 @@ void main() {
     });
   }
 
-  test('unpublished interrupted page files are not legacy cache hits', () async {
+  test('unpublished interrupted page files are not legacy cache hits',
+      () async {
     final chapter =
         Directory(p.join(directory.path, 'offline_manga', '7', '10'));
     await chapter.create(recursive: true);
@@ -121,7 +136,8 @@ void main() {
     expect(await cache.getOfflineChapterIds(7), isEmpty);
   });
 
-  test('two independent managers publish chapters without whole-map lost writes',
+  test(
+      'two independent managers publish chapters without whole-map lost writes',
       () async {
     await seedLegacy(9);
     final legacy = preferences.getString('offline_chapters_metadata');
@@ -140,7 +156,8 @@ void main() {
     expect((await firstSave).last.isComplete, isTrue);
 
     final restarted = manager();
-    expect(await restarted.getOfflineChapterIds(7), unorderedEquals([9, 10, 11]));
+    expect(
+        await restarted.getOfflineChapterIds(7), unorderedEquals([9, 10, 11]));
     for (final id in [9, 10, 11]) {
       expect(await restarted.isChapterAvailableOffline(7, id), isTrue);
       expect(await restarted.getOfflinePages(7, id), hasLength(1));

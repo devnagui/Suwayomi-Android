@@ -79,11 +79,12 @@ These are the versions of [Suwayomi-Server][suwayomi-server] that Sorayomi suppo
 Build this fork with `flutter build apk --release`. The APK is written to
 `build/app/outputs/flutter-apk/app-release.apk`.
 
-Version 0.6.12 retains hourly offline caching, structured diagnostics,
-incremental chapter sync and Activity navigation, adding serialized automatic
-reader read-ahead and manga-summary progress. To build its
+Version 0.6.13 retains hourly offline caching, structured diagnostics,
+incremental sync, Activity navigation and serialized reader read-ahead,
+with rotation-safe swipe controls and verified resumable device downloads.
+To build its
 ARM64 upgrade APK, use `flutter build apk --release --split-per-abi
---target-platform android-arm64`. The ARM64 APK has version code 2009 and is
+--target-platform android-arm64`. The ARM64 APK has version code 2010 and is
 written to `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
 Use the existing signing identity and install as an update; do not uninstall
 the app or clear its data to replace an APK.
@@ -127,6 +128,10 @@ published release of this fork.
     horizontal page swipes. Tap navigation, the page slider, vertical/webtoon
     scrolling, pinch zoom, and panning a zoomed page remain available.
     **Last page swipe** does not override disabled horizontal swiping.
+    Rotating a phone no longer enables tablet-only chapter gestures: device
+    classification uses its shorter screen dimension. Optional vertical
+    edge gestures do not capture lateral drags, and zero-velocity drag ends
+    do not advance a page.
   - **Smart downloads** prepares the next three chapters once the current
     chapter has readable pages. For example, reading 84 prepares 85, 86 and 87.
     It uses the unfiltered chapter sequence, supports fractional chapters,
@@ -206,7 +211,18 @@ published release of this fork.
     delay/prevent execution; an exact hourly deadline is not guaranteed.
     On Samsung, allow background activity and remove the app from sleeping/
     deep-sleeping apps if necessary. A run is bounded to eight minutes and
-    retries incomplete chapters on a later run. It only copies chapters the
+    resumes verified pages of incomplete chapters on a later run. Resume data
+    is reused only for the same server/page URL sequence and cache generation;
+    changing URLs, clearing caches, or removing downloads cannot resurrect
+    stale pages. Every newly copied page must decode as an image (JPEG, PNG,
+    WebP or GIF) before completion; HTML/login responses, empty/truncated
+    bodies and corrupt images are rejected. Encoded pages are limited to
+    32 MiB and decoded validation is downsampled. Android app-private free
+    space is checked before requesting pages and during writes, keeping
+    16 MiB reserved. Missing capacity information fails explicitly instead of
+    assuming space is available. The native capacity plugin also registers
+    in the WorkManager background engine, not just the foreground Activity.
+    It only copies chapters the
     server reports downloaded; it does not request source updates or
     re-enqueue server downloads.
     Metadata is paged in batches of 25; read chapters and non-library manga
@@ -233,6 +249,12 @@ These instructions will get you a copy of the project up and running on your loc
 Commit source and dependency locks before building a release, and record its
 branch and commit in the build receipt. Integrate parallel worktrees into this
 repository before delivery; an APK is not a backup of uncommitted source.
+
+GitHub validation uses a pinned Ubuntu runner and lock-enforced dependency
+resolution. Superseded PR runs are cancelled and each job has a time limit.
+Scheduler tests install their fake only after WorkManager's host initialization,
+so Linux CI does not overwrite the fake with a real Linux scheduler. Validation
+failures remain visible; tests are not removed or retried to hide defects.
 
 ### Prerequisites
 

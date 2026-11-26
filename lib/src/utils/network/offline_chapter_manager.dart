@@ -8,7 +8,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -92,12 +95,157 @@ class LocalDownloadProgress {
 /// Stores chapter pages as image files in app documents.
 class OfflineChapterManager {
   OfflineChapterManager(this._ref,
-      {Future<Directory> Function()? documentsDirectory})
+      {Future<Directory> Function()? documentsDirectory,
+      Future<void> Function(File)? imageValidator,
+      Future<int> Function(String)? availableBytes})
       : _documentsDirectory =
-            documentsDirectory ?? getApplicationDocumentsDirectory;
+            documentsDirectory ?? getApplicationDocumentsDirectory,
+        _imageValidator = imageValidator ?? validateImage,
+        _availableBytes = availableBytes ?? _androidAvailableBytes;
 
   final Ref _ref;
   final Future<Directory> Function() _documentsDirectory;
+  final Future<void> Function(File) _imageValidator;
+  final Future<int> Function(String) _availableBytes;
+
+  static const maxPageBytes = 32 * 1024 * 1024;
+  static const storageReserveBytes = 16 * 1024 * 1024;
+  static const _storageChannel = MethodChannel('suwayomi/offline_storage');
+
+  static Future<int> _androidAvailableBytes(String path) async {
+    if (!Platform.isAndroid) {
+      throw const LocalCacheException('storage_unsupported');
+    }
+    return queryAndroidAvailableBytes(path);
+  }
+
+  static Future<int> queryAndroidAvailableBytes(String path) async {
+    try {
+      final bytes = await _storageChannel
+          .invokeMethod<int>('availableBytes', {'path': path});
+      if (bytes == null || bytes < 0) {
+        throw const LocalCacheException('storage_unavailable');
+      }
+      return bytes;
+    } on PlatformException catch (error, stack) {
+      throw LocalCacheException('storage_unavailable',
+          cause: error, stackTrace: stack);
+    } on MissingPluginException catch (error, stack) {
+      throw LocalCacheException('storage_unavailable',
+          cause: error, stackTrace: stack);
+    }
+  }
+
+  Future<void> _checkSpace(String path, int bytes) async {
+    if (await _availableBytes(path) < bytes + storageReserveBytes) {
+      throw const LocalCacheException('insufficient_space');
+    }
+  }
+
+  /// Decode actual image content, not a MIME label or filename. Limit encoded
+  /// and decoded memory, and reject truncated envelopes that codecs tolerate.
+  static Future<void> validateImage(File file) async {
+    final length = await file.length();
+    if (length == 0) throw const LocalCacheException('empty_page');
+    if (length > maxPageBytes) {
+      throw const LocalCacheException('page_too_large');
+    }
+    final bytes = await file.readAsBytes();
+    final data = ByteData.sublistView(bytes);
+    bool matches(int offset, List<int> values) =>
+        offset >= 0 &&
+        offset + values.length <= bytes.length &&
+        List.generate(values.length, (i) => bytes[offset + i])
+            .asMap()
+            .entries
+            .every((e) => e.value == values[e.key]);
+    final png = matches(0, [137, 80, 78, 71, 13, 10, 26, 10]);
+    final jpeg = matches(0, [255, 216]);
+    final gif = matches(0, [71, 73, 70, 56]);
+    final webp = matches(0, [82, 73, 70, 70]) && matches(8, [87, 69, 66, 80]);
+    if (!(png || jpeg || gif || webp)) {
+      throw const LocalCacheException('invalid_image');
+    }
+    if ((png &&
+            !matches(bytes.length - 12,
+                [0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130])) ||
+        (jpeg && !matches(bytes.length - 2, [255, 217])) ||
+        (gif && bytes.last != 59) ||
+        (webp &&
+            (bytes.length < 12 ||
+                data.getUint32(4, Endian.little) + 8 != bytes.length))) {
+      throw const LocalCacheException('incomplete_page');
+    }
+    ui.ImmutableBuffer? buffer;
+    ui.ImageDescriptor? descriptor;
+    ui.Codec? codec;
+    try {
+      buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      descriptor = await ui.ImageDescriptor.encoded(buffer);
+      if (descriptor.width <= 0 ||
+          descriptor.height <= 0 ||
+          descriptor.width * descriptor.height > 100000000) {
+        throw const LocalCacheException('image_dimensions');
+      }
+      codec = await descriptor.instantiateCodec(
+          targetWidth: min(descriptor.width, 512),
+          targetHeight: min(descriptor.height, 512));
+      if (codec.frameCount > 1000) {
+        throw const LocalCacheException('image_frames');
+      }
+      for (var i = 0; i < codec.frameCount; i++) {
+        final frame = await codec.getNextFrame();
+        frame.image.dispose();
+      }
+    } on LocalCacheException {
+      rethrow;
+    } catch (error, stack) {
+      throw LocalCacheException('invalid_image',
+          cause: error, stackTrace: stack);
+    } finally {
+      codec?.dispose();
+      descriptor?.dispose();
+      buffer?.dispose();
+    }
+  }
+
+  Future<void> _writePage(File target, Stream<List<int>> stream,
+      {required Future<void> Function() checkAllowed,
+      int? expectedLength}) async {
+    final temporary = File('${target.path}.partial');
+    RandomAccessFile? output;
+    try {
+      await checkAllowed();
+      output = await temporary.open(mode: FileMode.write);
+      var length = 0;
+      await for (final chunk in stream) {
+        length += chunk.length;
+        if (length > maxPageBytes) {
+          throw const LocalCacheException('page_too_large');
+        }
+        await checkAllowed();
+        await _checkSpace(target.parent.path, chunk.length);
+        await output.writeFrom(chunk);
+      }
+      await output.flush();
+      await output.close();
+      output = null;
+      if (length == 0) throw const LocalCacheException('empty_page');
+      if (expectedLength != null && expectedLength != length) {
+        throw const LocalCacheException('incomplete_page');
+      }
+      await _imageValidator(temporary);
+      await checkAllowed();
+      await temporary.rename(target.path);
+    } on FileSystemException {
+      // A user clear/removal can delete the attempt while IO is pending.
+      await checkAllowed();
+      rethrow;
+    } finally {
+      await output?.close();
+      if (await temporary.exists()) await temporary.delete();
+    }
+  }
 
   static const _metadataKey = 'offline_chapters_metadata';
   static final _random = Random.secure();
@@ -145,7 +293,8 @@ class OfflineChapterManager {
       _state(int mangaId, int chapterId) async {
     final global = await _readJson(
         File(p.join((await _getStateDir()).path, 'clear.json')));
-    final chapter = await _readJson(await _chapterStateFile(mangaId, chapterId));
+    final chapter =
+        await _readJson(await _chapterStateFile(mangaId, chapterId));
     return (
       epoch: global?['generation'] as String? ?? 'legacy',
       revision: chapter?['generation'] as String? ?? 'legacy',
@@ -216,7 +365,6 @@ class OfflineChapterManager {
     var downloadedPages = 0;
     int? httpStatus;
     Directory? attemptPages;
-    var published = false;
     // Queue callers already log their attempts, retries and final validation.
     // Direct manual saves still need diagnostics, without duplicate events.
     void record(String outcome,
@@ -259,8 +407,16 @@ class OfflineChapterManager {
 
       await checkAllowed();
       if (totalPages == 0) throw const LocalCacheException('empty_pages');
+      final baseApi = _buildBaseApi();
       final existing = await getOfflinePages(mangaId, chapterId);
-      if (existing?.length == totalPages) {
+      final chapterDir = await _getChapterDir(mangaId, chapterId);
+      final completion = await _readJson(File(p.join(
+          chapterDir.path, _manifestName(initial.epoch, initial.revision))));
+      bool sameSequence(Map<String, dynamic> value) =>
+          value['baseApi'] == baseApi &&
+          jsonEncode(value['pageUrls']) == jsonEncode(pageUrls);
+      if (existing?.length == totalPages &&
+          (completion?['verified'] != true || sameSequence(completion!))) {
         await checkAllowed();
         record('already_on_device',
             reasonCode: 'already_on_device', completedPages: totalPages);
@@ -274,39 +430,116 @@ class OfflineChapterManager {
         );
         return;
       }
-      final chapterDir = await _getChapterDir(mangaId, chapterId);
+      await _checkSpace(chapterDir.path, 0);
+      final resumeSources = <Directory>[];
+      await for (final entity in chapterDir.list(followLinks: false)) {
+        if (entity is! Directory ||
+            !RegExp(r'^pages-[a-zA-Z0-9_-]+$')
+                .hasMatch(p.basename(entity.path))) {
+          continue;
+        }
+        try {
+          final resume =
+              await _readJson(File(p.join(entity.path, 'resume.json')));
+          if (resume != null &&
+              resume['epoch'] == initial.epoch &&
+              resume['revision'] == initial.revision &&
+              sameSequence(resume)) {
+            resumeSources.add(entity);
+          }
+        } on FormatException {
+          // Ambiguous old attempts are never deleted or treated as completed.
+        }
+      }
       // Each attempt owns immutable pages. Concurrent engines cannot mix page
       // sets or overwrite pages referenced by a published completion manifest.
       final pages = await chapterDir.createTemp('pages-');
       attemptPages = pages;
-      final baseApi = _buildBaseApi();
+      await _writeJson(File(p.join(pages.path, 'resume.json')), {
+        'epoch': initial.epoch,
+        'revision': initial.revision,
+        'baseApi': baseApi,
+        'pageUrls': pageUrls,
+      });
       for (int i = 0; i < totalPages; i++) {
         await checkAllowed();
-        final url = '$baseApi${pageUrls[i]}';
-        httpStatus = null;
-        final response =
-            await _ref.read(serverMediaHttpClientProvider).get(Uri.parse(url));
-        httpStatus = response.statusCode;
-        if (response.statusCode != 200) {
-          throw LocalCacheException('http_status',
-              httpStatus: response.statusCode);
+        final target = File(p.join(pages.path, '$i.jpg'));
+        var resumed = false;
+        for (final source in resumeSources) {
+          final saved = File(p.join(source.path, '$i.jpg'));
+          try {
+            if (!await saved.exists()) continue;
+            await _imageValidator(saved);
+            final length = await saved.length();
+            if (length <= 0 || length > maxPageBytes) continue;
+            await _checkSpace(pages.path, length);
+            await _writePage(target, saved.openRead(),
+                checkAllowed: checkAllowed, expectedLength: length);
+            resumed = true;
+            break;
+          } on LocalCacheException catch (error) {
+            if (![
+              'invalid_image',
+              'incomplete_page',
+              'empty_page',
+              'page_too_large',
+              'image_dimensions',
+              'image_frames',
+            ].contains(error.reasonCode)) {
+              rethrow;
+            }
+            record('resume_rejected', reasonCode: error.reasonCode);
+          } on FileSystemException {
+            if (await saved.exists()) rethrow;
+          }
         }
-        if (response.bodyBytes.isEmpty) {
-          throw const LocalCacheException('empty_page');
+        if (!resumed) {
+          // Admission happens before GET, then again before every disk write.
+          await _checkSpace(pages.path, 0);
+          final url = '$baseApi${pageUrls[i]}';
+          httpStatus = null;
+          final response = await _ref
+              .read(serverMediaHttpClientProvider)
+              .send(http.Request('GET', Uri.parse(url)));
+          httpStatus = response.statusCode;
+          final iterator = StreamIterator<List<int>>(response.stream);
+          try {
+            if (response.statusCode != 200) {
+              throw LocalCacheException('http_status',
+                  httpStatus: response.statusCode);
+            }
+            final contentType = response.headers['content-type']?.toLowerCase();
+            if (contentType != null &&
+                (contentType.contains('text/') ||
+                    contentType.contains('json') ||
+                    contentType.contains('xml'))) {
+              throw const LocalCacheException('invalid_image');
+            }
+            final expectedLength =
+                int.tryParse(response.headers['content-length'] ?? '');
+            // IOClient may have decompressed the body while retaining the wire
+            // Content-Length. Stream errors still reject interrupted bodies.
+            final encoding = response.headers['content-encoding'];
+            final lengthIsExact = encoding == null || encoding == 'identity';
+            if (lengthIsExact && expectedLength != null) {
+              if (expectedLength > maxPageBytes) {
+                throw const LocalCacheException('page_too_large');
+              }
+              await _checkSpace(pages.path, expectedLength);
+            }
+            Stream<List<int>> body() async* {
+              while (await iterator.moveNext()) {
+                yield iterator.current;
+              }
+            }
+
+            await _writePage(target, body(),
+                checkAllowed: checkAllowed,
+                expectedLength: lengthIsExact ? expectedLength : null);
+          } finally {
+            await iterator.cancel();
+          }
         }
-        final expectedLength =
-            int.tryParse(response.headers['content-length'] ?? '');
-        // IOClient may have decompressed the body while retaining the wire
-        // Content-Length. Stream errors still reject interrupted bodies.
-        final encoding = response.headers['content-encoding'];
-        if (expectedLength != null &&
-            (encoding == null || encoding == 'identity') &&
-            expectedLength != response.bodyBytes.length) {
-          throw const LocalCacheException('incomplete_page');
-        }
-        await checkAllowed();
-        await _atomicWrite(
-            File(p.join(pages.path, '$i.jpg')), response.bodyBytes);
         await checkAllowed();
         downloadedPages = i + 1;
         if (downloadedPages < totalPages) {
@@ -322,16 +555,18 @@ class OfflineChapterManager {
 
       await checkAllowed();
       await _writeJson(
-          File(p.join(chapterDir.path,
-              _manifestName(initial.epoch, initial.revision))),
+          File(p.join(
+              chapterDir.path, _manifestName(initial.epoch, initial.revision))),
           {
             'mangaId': mangaId,
             'chapterId': chapterId,
             'pageCount': totalPages,
             'pagesDirectory': p.basename(pages.path),
             'downloadedAt': DateTime.now().toIso8601String(),
+            'verified': true,
+            'baseApi': baseApi,
+            'pageUrls': pageUrls,
           });
-      published = true;
       await checkAllowed();
       record('completed');
       yield LocalDownloadProgress(
@@ -360,10 +595,14 @@ class OfflineChapterManager {
         httpStatus: httpStatus,
       );
     } finally {
-      // Only remove this attempt's unpublished, app-owned directory. A killed
-      // process may leave one behind, but it can never count as a completion.
-      if (!published && attemptPages != null && await attemptPages.exists()) {
-        await attemptPages.delete(recursive: true);
+      // Keep verified pages for a future immutable attempt. Never remove
+      // another engine's attempt or rollback data; only owned partials vanish.
+      if (attemptPages != null && await attemptPages.exists()) {
+        await for (final entity in attemptPages.list(followLinks: false)) {
+          if (entity is File && entity.path.endsWith('.partial')) {
+            await entity.delete();
+          }
+        }
       }
     }
   }
@@ -377,10 +616,10 @@ class OfflineChapterManager {
   Future<List<File>?> getOfflinePages(int mangaId, int chapterId) async {
     final state = await _state(mangaId, chapterId);
     if (state.excluded || state.clearing) return null;
-    final chapterDir = Directory(
-        p.join((await _getBaseDir()).path, '$mangaId', '$chapterId'));
-    var metadata = await _readJson(File(p.join(
-        chapterDir.path, _manifestName(state.epoch, state.revision))));
+    final chapterDir =
+        Directory(p.join((await _getBaseDir()).path, '$mangaId', '$chapterId'));
+    var metadata = await _readJson(File(
+        p.join(chapterDir.path, _manifestName(state.epoch, state.revision))));
     var pagesPath = chapterDir.path;
     if (metadata != null) {
       final name = metadata['pagesDirectory'];
@@ -399,6 +638,9 @@ class OfflineChapterManager {
       final file = File(p.join(pagesPath, '$i.jpg'));
       try {
         if (await file.length() == 0) return null;
+        if (metadata?['verified'] == true) await _imageValidator(file);
+      } on LocalCacheException {
+        return null;
       } on FileSystemException {
         if (!await file.exists()) return null;
         rethrow;
@@ -427,8 +669,7 @@ class OfflineChapterManager {
         .where((e) => e.key.startsWith('${mangaId}_'))
         .map((e) => e.value['chapterId'] as int)
         .toSet();
-    final mangaDir =
-        Directory(p.join((await _getBaseDir()).path, '$mangaId'));
+    final mangaDir = Directory(p.join((await _getBaseDir()).path, '$mangaId'));
     if (await mangaDir.exists()) {
       await for (final entity in mangaDir.list(followLinks: false)) {
         final id = int.tryParse(p.basename(entity.path));
@@ -498,7 +739,6 @@ class OfflineChapterManager {
     final decoded = jsonDecode(raw) as Map<String, dynamic>;
     return decoded.map((k, v) => MapEntry(k, Map<String, dynamic>.from(v)));
   }
-
 }
 
 @riverpod

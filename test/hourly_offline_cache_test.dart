@@ -66,9 +66,9 @@ void main() {
     final preferences = await SharedPreferences.getInstance();
     return fixture.CacheHarness(response, overrides: [
       sharedPreferencesProvider.overrideWithValue(preferences),
-      graphQlClientProvider.overrideWith((ref) =>
-          GraphQLClient(cache: GraphQLCache(),
-              link: Link.function((_, [__]) => const Stream.empty()))),
+      graphQlClientProvider.overrideWith((ref) => GraphQLClient(
+          cache: GraphQLCache(),
+          link: Link.function((_, [__]) => const Stream.empty()))),
     ]);
   }
 
@@ -95,8 +95,8 @@ void main() {
 
   test('headless worker copies a missed server download without foreground UI',
       () async {
-    final cache = await harness((_) =>
-        fixture.candidatePage([fixture.candidate(4992)]));
+    final cache =
+        await harness((_) => fixture.candidatePage([fixture.candidate(4992)]));
     addTearDown(cache.dispose);
 
     expect(await runHourlyOfflineCache(cache.container), isTrue);
@@ -105,7 +105,8 @@ void main() {
         'GetOfflineCacheCandidates');
   });
 
-  test('background runtime uses memory cache without foreground Hive or sockets',
+  test(
+      'background runtime uses memory cache without foreground Hive or sockets',
       () async {
     final preferences = await SharedPreferences.getInstance();
     final container = createBackgroundCacheContainer(preferences);
@@ -114,7 +115,8 @@ void main() {
     expect(client.cache.store, isA<InMemoryStore>());
     final repository = container.read(downloadsRepositoryProvider);
     expect(repository.subscriptionClient, same(client));
-    expect(container.read(mangaBookRepositoryProvider).cacheChapterPages, isFalse);
+    expect(
+        container.read(mangaBookRepositoryProvider).cacheChapterPages, isFalse);
   });
 
   test('signed-out UI Login does not make server requests', () async {
@@ -133,7 +135,8 @@ void main() {
     final cache = await harness((_) => throw StateError('private-url-secret'));
     addTearDown(cache.dispose);
     expect(await runHourlyOfflineCache(cache.container), isFalse);
-    expect(OperationLog.instance.exportText(), isNot(contains('private-url-secret')));
+    expect(OperationLog.instance.exportText(),
+        isNot(contains('private-url-secret')));
   });
 
   test('background deadline returns retry and does not report completion',
@@ -141,8 +144,10 @@ void main() {
     final waiting = Completer<Response>();
     final cache = await harness((_) => waiting.future);
     addTearDown(cache.dispose);
-    expect(await runHourlyOfflineCache(cache.container,
-        budget: const Duration(milliseconds: 5)), isFalse);
+    expect(
+        await runHourlyOfflineCache(cache.container,
+            budget: const Duration(milliseconds: 5)),
+        isFalse);
     expect(OperationLog.instance.exportText(), contains('TimeoutException'));
     waiting.complete(fixture.candidatePage([]));
     await fixture.flushAsync();
@@ -152,11 +157,16 @@ void main() {
       () async {
     final preferences = await SharedPreferences.getInstance();
     OperationLog.instance.record('OfflineChapterCache',
-        outcome: 'failed', error: StateError('private-server-token'),
+        outcome: 'failed',
+        error: StateError('private-server-token'),
         reasonCode: 'incomplete_page');
     OperationLog.instance.record('OfflineCacheCatchUp',
-        outcome: 'scanned', count: 3, copied: 0, alreadyCached: 2,
-        excluded: 0, failed: 1);
+        outcome: 'scanned',
+        count: 3,
+        copied: 0,
+        alreadyCached: 2,
+        excluded: 0,
+        failed: 1);
     OperationLog.instance.record('OfflineCacheHourly', outcome: 'failed');
     await saveHourlyCacheDiagnostics(preferences, false);
     OperationLog.instance.clear();
@@ -184,11 +194,13 @@ void main() {
     expect(receipt.containsKey('copied'), isFalse);
   });
 
-  test('invalid background receipt is not reported as legacy success', () async {
+  test('invalid background receipt is not reported as legacy success',
+      () async {
     SharedPreferences.setMockInitialValues({
       'offlineCacheBackgroundLastRun': 123,
       'offlineCacheBackgroundOutcome': 'previous_run_completed',
-      'offlineCacheBackgroundDiagnostic': '{"outcome":"previous_run_completed"}',
+      'offlineCacheBackgroundDiagnostic':
+          '{"outcome":"previous_run_completed"}',
     });
     final preferences = await SharedPreferences.getInstance();
     await reportHourlyOfflineCache(preferences);
