@@ -79,12 +79,13 @@ These are the versions of [Suwayomi-Server][suwayomi-server] that Sorayomi suppo
 Build this fork with `flutter build apk --release`. The APK is written to
 `build/app/outputs/flutter-apk/app-release.apk`.
 
-Version 0.6.14 retains hourly offline caching, structured diagnostics,
+Version 0.6.15 retains hourly offline caching, structured diagnostics,
 incremental sync, Activity navigation, serialized read-ahead, rotation fixes
-and verified resumable downloads, adding durable reading-position sync.
+and verified resumable downloads with durable reading-position sync, and
+replenishes reader read-ahead throughout chapter transitions.
 To build its
 ARM64 upgrade APK, use `flutter build apk --release --split-per-abi
---target-platform android-arm64`. The ARM64 APK has version code 2011 and is
+--target-platform android-arm64`. The ARM64 APK has version code 2012 and is
 written to `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`.
 Use the existing signing identity and install as an update; do not uninstall
 the app or clear its data to replace an APK.
@@ -151,8 +152,14 @@ published release of this fork.
     classification uses its shorter screen dimension. Optional vertical
     edge gestures do not capture lateral drags, and zero-velocity drag ends
     do not advance a page.
-  - **Smart downloads** prepares the next three chapters once the current
-    chapter has readable pages. For example, reading 84 prepares 85, 86 and 87.
+  - **Smart downloads** prepares the next three chapters when entering the
+    reader and every time the current chapter changes, without waiting for
+    current-page network requests or returning to the manga summary.
+    For example, reading 84 prepares 85, 86 and 87; moving to 85 replenishes
+    86, 87 and 88. Page changes also recheck the request without duplicating
+    the active window. This applies to paged/continuous horizontal LTR/RTL,
+    vertical and webtoon modes. Chapter transitions reset the reader's page
+    controllers rather than inheriting the previous chapter's scroll state.
     It uses the unfiltered chapter sequence, supports fractional chapters,
     and prefers the current scanlator among duplicate chapter numbers.
     One chapter is requested on the server, verified downloaded, and copied
@@ -162,7 +169,9 @@ published release of this fork.
     server progress, device progress, retry attempts, paused and ready states,
     including when chapter rows are hidden by filters or lazy loading.
     Three application attempts use 30/60-second backoff; persistent failure
-    stops the window until **Retry** or a new reading window. These are in
+    stops the window until **Retry** or a new reading window. A chapter
+    transition rebuilds the pending window in reading order and releases the
+    old failure lock, while an owned in-flight task stays serialized. These are in
     addition to the server/device workers' existing internal retry limits.
     Unrelated queued work is allowed to finish first, and paused pending server
     work is not automatically resumed. Existing manual cache exclusions and

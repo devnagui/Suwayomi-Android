@@ -343,6 +343,85 @@ void main() {
     expect(h.copies.started, [85, 86, 87]);
   });
 
+  testWidgets('reopening reading retries a failed window but page events do not',
+      (tester) async {
+    final h = await harness();
+    addTearDown(h.container.dispose);
+    final service = h.container.read(readerReadAheadProvider.notifier);
+    h.server.failures = 3;
+    await service.startReading(37, 84);
+    await tick(tester);
+    await tester.pump(const Duration(seconds: 30));
+    await tick(tester);
+    await tester.pump(const Duration(seconds: 60));
+    await tick(tester);
+    await service.request(37, 84);
+    await tick(tester, 3);
+    expect(h.server.enqueued, [85, 85, 85]);
+    await service.startReading(37, 84);
+    await tick(tester, 12);
+    expect(h.server.enqueued, [85, 85, 85, 85, 86, 87]);
+  });
+
+  testWidgets(
+      'continuous chapter transitions replenish a rolling three-chapter window',
+      (tester) async {
+    final h = await harness();
+    addTearDown(h.container.dispose);
+    final service = h.container.read(readerReadAheadProvider.notifier);
+    for (final current in [84, 85, 86, 87]) {
+      await service.request(37, current);
+      await tick(tester, 12);
+      for (var id = current + 1; id <= current + 3; id++) {
+        expect(h.storage.available, contains(id),
+            reason: 'reading$current must prepare its next three chapters');
+      }
+    }
+    expect(h.server.enqueued, [85, 86, 87, 88, 89, 90]);
+    expect(h.copies.started, [85, 86, 87, 88, 89, 90]);
+  });
+
+  testWidgets(
+      'advancing while a copy runs replaces pending work without overlap',
+      (tester) async {
+    final h = await harness();
+    addTearDown(h.container.dispose);
+    h.copies.automaticCompletion = false;
+    final service = h.container.read(readerReadAheadProvider.notifier);
+    await service.request(37, 84);
+    await tick(tester, 2);
+    expect(h.copies.started, [85]);
+    await service.request(37, 85);
+    await service.request(37, 86);
+    await tick(tester, 2);
+    expect(h.server.enqueued, [85]);
+    h.copies.automaticCompletion = true;
+    h.copies.complete(85);
+    await tick(tester, 12);
+    expect(h.server.enqueued, [85, 87, 88, 89]);
+    expect(h.storage.available, containsAll([87, 88, 89]));
+  });
+
+  testWidgets('advancing chapters releases a failed previous window lock',
+      (tester) async {
+    final h = await harness();
+    addTearDown(h.container.dispose);
+    final service = h.container.read(readerReadAheadProvider.notifier);
+    h.storage.available.add(85);
+    h.server.failures = 3;
+    await service.request(37, 84);
+    await tick(tester);
+    await tester.pump(const Duration(seconds: 30));
+    await tick(tester);
+    await tester.pump(const Duration(seconds: 60));
+    await tick(tester);
+    expect(h.container.read(readerReadAheadProvider)[86]?.phase,
+        ReadAheadPhase.failed);
+    await service.request(37, 85);
+    await tick(tester, 12);
+    expect(h.server.enqueued, [86, 86, 86, 86, 87, 88]);
+  });
+
   testWidgets('unrelated active work finishes before a read-ahead enqueue',
       (tester) async {
     final h = await harness();

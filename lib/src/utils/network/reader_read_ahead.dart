@@ -93,6 +93,7 @@ class ReaderReadAhead extends Notifier<Map<int, ReadAheadStatus>> {
   bool _disposed = false;
   bool _paused = false;
   bool _blocked = false;
+  Set<int> _windowIds = {};
 
   @override
   Map<int, ReadAheadStatus> build() {
@@ -120,6 +121,11 @@ class ReaderReadAhead extends Notifier<Map<int, ReadAheadStatus>> {
     return {};
   }
 
+  Future<void> startReading(int mangaId, int chapterId) {
+    _lastRequest = null;
+    return request(mangaId, chapterId);
+  }
+
   Future<void> request(int mangaId, int chapterId) async {
     if (_disposed || !ref.read(smartDownloadNextChapterProvider)) return;
     final key = (mangaId, chapterId);
@@ -142,12 +148,22 @@ class ReaderReadAhead extends Notifier<Map<int, ReadAheadStatus>> {
       }
       final next = selectReadAheadChapters(chapters, chapterId);
       final ids = next.map((c) => c.id).toSet();
-      _pending.removeWhere((c) => !ids.contains(c.id));
+      _windowIds = ids;
+      _pending.clear();
       state = {
         for (final entry in state.entries)
           if (ids.contains(entry.key) || entry.key == _active)
             entry.key: entry.value,
       };
+      // Entering another chapter starts a new bounded attempt window.
+      // Keep owned work in flight, but do not retain an old failed-window lock.
+      for (final entry in state.entries.toList()) {
+        if (entry.value.phase == ReadAheadPhase.failed &&
+            ids.contains(entry.key) &&
+            entry.key != _active) {
+          state = {...state}..remove(entry.key);
+        }
+      }
       _blocked = state.values.any((s) => s.phase == ReadAheadPhase.failed);
       for (final chapter in next) {
         if (_cancelled.contains(chapter.id) ||
@@ -249,6 +265,10 @@ class ReaderReadAhead extends Notifier<Map<int, ReadAheadStatus>> {
         return;
       } catch (error, stackTrace) {
         if (_disposed) return;
+        if (!_windowIds.contains(chapter.id)) {
+          state = {...state}..remove(chapter.id);
+          return;
+        }
         final reason =
             error is _ReadAheadFailure ? error.reasonCode : 'request_failed';
         OperationLog.instance.record('ReaderReadAhead',
