@@ -6,18 +6,22 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/toast/toast.dart';
+import '../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../domain/history_item.dart';
 import '../../domain/history_menu_action.dart';
 
-class HistoryItemTile extends ConsumerWidget {
+class HistoryItemTile extends HookConsumerWidget {
   const HistoryItemTile({
     super.key,
     required this.item,
@@ -27,7 +31,7 @@ class HistoryItemTile extends ConsumerWidget {
 
   final HistoryItemDto item;
   final VoidCallback? onTap;
-  final VoidCallback onRemove;
+  final AsyncCallback onRemove;
 
   bool _isChapterCompleted() {
     final isFullyRead = item.isRead == true;
@@ -39,6 +43,7 @@ class HistoryItemTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final readDate = item.readAt;
+    final isRemoving = useState(false);
     final timeString = readDate != null ? DateFormat.Hm().format(readDate) : '';
 
     return Card(
@@ -152,36 +157,39 @@ class HistoryItemTile extends ConsumerWidget {
                 ),
               ),
               // Actions
-              PopupMenuButton<HistoryMenuAction>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: context.theme.colorScheme.onSurfaceVariant,
-                ),
-                onSelected: (action) {
-                  switch (action) {
-                    case HistoryMenuAction.removeFromHistory:
-                      _showRemoveDialog(context);
-                      break;
-                    case HistoryMenuAction.viewManga:
-                      _navigateToManga(context);
-                      break;
-                  }
-                },
-                itemBuilder: (context) => HistoryMenuAction.values
-                    .map(
-                      (action) => PopupMenuItem(
-                        value: action,
-                        child: Row(
-                          children: [
-                            Icon(action.icon),
-                            const SizedBox(width: 8),
-                            Text(action.toLocale(context)),
-                          ],
+              if (isRemoving.value)
+                const MiniCircularProgressIndicator()
+              else
+                PopupMenuButton<HistoryMenuAction>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: context.theme.colorScheme.onSurfaceVariant,
+                  ),
+                  onSelected: (action) {
+                    switch (action) {
+                      case HistoryMenuAction.removeFromHistory:
+                        _showRemoveDialog(context, ref, isRemoving);
+                        break;
+                      case HistoryMenuAction.viewManga:
+                        _navigateToManga(context);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => HistoryMenuAction.values
+                      .map(
+                        (action) => PopupMenuItem(
+                          value: action,
+                          child: Row(
+                            children: [
+                              Icon(action.icon),
+                              const SizedBox(width: 8),
+                              Text(action.toLocale(context)),
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
-              ),
+                      )
+                      .toList(),
+                ),
             ],
           ),
         ),
@@ -189,23 +197,36 @@ class HistoryItemTile extends ConsumerWidget {
     );
   }
 
-  void _showRemoveDialog(BuildContext context) {
+  void _showRemoveDialog(
+    BuildContext context,
+    WidgetRef ref,
+    ValueNotifier<bool> isRemoving,
+  ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.removeFromHistory),
-        content: Text(context.l10n.removeFromHistoryConfirmation),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.l10n.removeFromHistory),
+        content: Text(dialogContext.l10n.removeFromHistoryConfirmation),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.cancel),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(dialogContext.l10n.cancel),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onRemove();
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              if (isRemoving.value) return;
+              isRemoving.value = true;
+              try {
+                final result = await AsyncValue.guard(onRemove);
+                if (context.mounted) {
+                  result.showToastOnError(ref.read(toastProvider));
+                }
+              } finally {
+                if (context.mounted) isRemoving.value = false;
+              }
             },
-            child: Text(context.l10n.remove),
+            child: Text(dialogContext.l10n.remove),
           ),
         ],
       ),

@@ -49,3 +49,34 @@ query GetDownloadStatus {
     ...DownloadStatusDto
   }
 }
+
+# Read server metadata only: do not fetch source chapters or enqueue downloads.
+query GetOfflineCacheCandidates($after: Cursor, $first: Int!) {
+  chapters(
+    after: $after
+    first: $first
+    filter: {
+      inLibrary: {equalTo: true}
+      isDownloaded: {equalTo: true}
+      isRead: {equalTo: false}
+    }
+    order: [{by: ID, byType: ASC}]
+  ) {
+    nodes {
+      id
+      mangaId
+      user {
+        isDownloaded
+        isRead
+      }
+      manga {
+        user {
+          inLibrary
+        }
+      }
+    }
+    pageInfo {
+      ...PageInfoDto
+    }
+  }
+}

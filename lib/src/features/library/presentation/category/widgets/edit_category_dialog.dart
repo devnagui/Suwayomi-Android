@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../domain/category/category_model.dart';
 
@@ -22,10 +23,10 @@ class EditCategoryDialog extends HookConsumerWidget {
   }) : assert((category != null && editCategory != null) ||
             (category == null && createCategory != null));
   final CategoryDto? category;
-  final void Function(CategoryUpdate)? editCategory;
-  final void Function(CategoryCreate)? createCategory;
+  final Future<AsyncValue<void>> Function(CategoryUpdate)? editCategory;
+  final Future<AsyncValue<void>> Function(CategoryCreate)? createCategory;
 
-  Future<void> submitEditCategory(
+  Future<AsyncValue<void>> submitEditCategory(
     String categoryName,
     bool defaultCategory,
   ) async {
@@ -45,6 +46,29 @@ class EditCategoryDialog extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoryName = useTextEditingController(text: category?.name);
     final defaultCategory = useState((category?.defaultCategory).ifNull());
+    final isSaving = useState(false);
+
+    Future<void> save() async {
+      if (isSaving.value) return;
+      if (categoryName.text.isBlank) {
+        ref.read(toastProvider)?.showError(context.l10n.emptyCategory);
+        return;
+      }
+      isSaving.value = true;
+      try {
+        final result = await submitEditCategory(
+          categoryName.text,
+          defaultCategory.value,
+        );
+        if (context.mounted) {
+          result.showToastOnError(ref.read(toastProvider));
+          if (!result.hasError) Navigator.pop(context);
+        }
+      } finally {
+        if (context.mounted) isSaving.value = false;
+      }
+    }
+
     return AlertDialog(
       title: Text(
         category == null ? context.l10n.addCategory : context.l10n.editCategory,
@@ -61,25 +85,20 @@ class EditCategoryDialog extends HookConsumerWidget {
                   : context.l10n.editCategory,
               border: const OutlineInputBorder(),
             ),
-            onSubmitted: (categoryName.text).isNotBlank
-                ? (text) {
-                    submitEditCategory(
-                      categoryName.text,
-                      defaultCategory.value,
-                    );
-                    Navigator.pop(context);
-                  }
-                : null,
+            enabled: !isSaving.value,
+            onSubmitted: (categoryName.text).isNotBlank ? (_) => save() : null,
           ),
           CheckboxListTile(
             value: defaultCategory.value,
             dense: true,
             controlAffinity: ListTileControlAffinity.leading,
-            onChanged: (value) {
-              if (value != null) {
-                defaultCategory.value = (value);
-              }
-            },
+            onChanged: isSaving.value
+                ? null
+                : (value) {
+                    if (value != null) {
+                      defaultCategory.value = (value);
+                    }
+                  },
             title: Text(context.l10n.defaultCategory),
           )
         ],
@@ -87,15 +106,10 @@ class EditCategoryDialog extends HookConsumerWidget {
       actions: [
         const PopButton(),
         ElevatedButton(
-          onPressed: () {
-            if ((categoryName.text).isBlank) {
-              ref.read(toastProvider)?.showError(context.l10n.emptyCategory);
-              return;
-            }
-            submitEditCategory(categoryName.text, defaultCategory.value);
-            Navigator.pop(context);
-          },
-          child: Text(context.l10n.save),
+          onPressed: isSaving.value ? null : save,
+          child: isSaving.value
+              ? const MiniCircularProgressIndicator()
+              : Text(context.l10n.save),
         ),
       ],
     );

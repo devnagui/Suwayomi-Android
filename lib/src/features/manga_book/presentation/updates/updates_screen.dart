@@ -20,6 +20,7 @@ import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart
 import '../../widgets/stop_updates_button.dart';
 import '../../widgets/update_status_fab.dart';
 import '../../widgets/update_status_popup_menu.dart';
+import '../activity/activity_screen.dart';
 import '../reader/controller/reader_controller.dart';
 import 'widgets/chapter_manga_list_tile.dart';
 
@@ -56,6 +57,7 @@ class UpdatesScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final activity = ActivityScreen.maybeOf(context);
     final controller =
         usePagingController<int, ChapterWithMangaDto>(firstPageKey: 0);
     final updatesRepository = ref.watch(updatesRepositoryProvider);
@@ -88,6 +90,7 @@ class UpdatesScreen extends HookConsumerWidget {
           selectedChapters.value.isEmpty ? const UpdateStatusFab() : null,
       appBar: selectedChapters.value.isNotEmpty
           ? AppBar(
+              bottom: activity == null ? null : const ActivityTabs(),
               leading: IconButton(
                 onPressed: () => selectedChapters.value = ({}),
                 icon: const Icon(Icons.close_rounded),
@@ -97,13 +100,36 @@ class UpdatesScreen extends HookConsumerWidget {
               ),
             )
           : AppBar(
-              title: Text(context.l10n.updates),
+              title: Text(activity == null
+                  ? context.l10n.updates
+                  : context.l10n.activity),
+              bottom: activity == null ? null : const ActivityTabs(),
               actions: const [StopUpdatesButton(), UpdateStatusPopupMenu()],
             ),
       bottomNavigationBar: selectedChapters.value.isNotEmpty
           ? MultiChaptersActionsBottomAppBar(
               selectedChapters: selectedChapters,
               afterOptionSelected: () async => controller.refresh(),
+              onChaptersUpdated: (chapters) async {
+                final updates = {
+                  for (final chapter in chapters) chapter.id: chapter,
+                };
+                controller.itemList = [
+                  for (final item in [...?controller.itemList])
+                    if (updates[item.id] case final chapter?)
+                      item.copyWith(
+                        user: item.user.copyWith(
+                          isBookmarked: chapter.isBookmarked,
+                          isDownloaded: chapter.isDownloaded,
+                          isRead: chapter.isRead,
+                          lastPageRead: chapter.lastPageRead,
+                          lastReadAt: chapter.lastReadAt,
+                        ),
+                      )
+                    else
+                      item,
+                ];
+              },
             )
           : null,
       body: RefreshIndicator(

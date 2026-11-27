@@ -48,12 +48,13 @@ class MutationCache {
       final dir = await _cacheDir!;
       final file = File(p.join(dir.path, '${_sanitizeKey(key)}.json'));
       await file.writeAsString(jsonEncode(jsonData));
-      OperationLog.instance.record('MutationCacheWrite', outcome: 'saved');
-    } on FileSystemException catch (error) {
+    } on FileSystemException catch (error, stackTrace) {
       _cacheDir = null;
       logger.w('Could not write the local mutation cache', error: error);
       OperationLog.instance
-          .record('MutationCacheWrite', outcome: 'storage_error');
+          .record('MutationCacheWrite', outcome: 'storage_error',
+              stage: 'metadata_cache', error: error, stackTrace: stackTrace,
+              reasonCode: 'storage_write_failed');
     }
   }
 

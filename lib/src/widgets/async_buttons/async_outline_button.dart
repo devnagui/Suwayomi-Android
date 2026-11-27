@@ -22,8 +22,11 @@ class AsyncOutlineButton extends HookWidget {
           ? null
           : () async {
               isLoading.value = (true);
-              await onPressed?.call();
-              isLoading.value = (false);
+              try {
+                await onPressed?.call();
+              } finally {
+                if (context.mounted) isLoading.value = (false);
+              }
             },
       style: style,
       child: isLoading.value ? const MiniCircularProgressIndicator() : child,

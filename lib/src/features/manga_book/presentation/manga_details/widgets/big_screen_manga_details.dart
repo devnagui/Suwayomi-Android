@@ -13,6 +13,7 @@ import '../../../../../widgets/emoticons.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import '../../../widgets/read_ahead_summary.dart';
 import 'chapter_list_tile.dart';
 import 'manga_description.dart';
 
@@ -44,15 +45,20 @@ class BigScreenMangaDetails extends ConsumerWidget {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              child: MangaDescription(
-                manga: manga,
-                removeMangaFromLibrary: (() => ref
-                    .read(mangaBookRepositoryProvider)
-                    .removeMangaFromLibrary(mangaId)),
-                addMangaToLibrary: (() => ref
-                    .read(mangaBookRepositoryProvider)
-                    .addMangaToLibrary(mangaId)),
-                refresh: () => onDescriptionRefresh(false),
+              child: Column(
+                children: [
+                  MangaDescription(
+                    manga: manga,
+                    removeMangaFromLibrary: (() => ref
+                        .read(mangaBookRepositoryProvider)
+                        .removeMangaFromLibrary(mangaId)),
+                    addMangaToLibrary: (() => ref
+                        .read(mangaBookRepositoryProvider)
+                        .addMangaToLibrary(mangaId)),
+                    refresh: () => onDescriptionRefresh(false),
+                  ),
+                  ReadAheadSummary(mangaId: mangaId),
+                ],
               ),
             ),
           ),

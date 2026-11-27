@@ -23,17 +23,12 @@ class NavigationBarData {
     NavigationBarData(
       icon: Icons.new_releases_outlined,
       activeIcon: Icons.new_releases_rounded,
-      label: (context) => context.l10n.updates,
+      label: (context) => context.l10n.activity,
     ),
     NavigationBarData(
       icon: Icons.explore_outlined,
       activeIcon: Icons.explore_rounded,
       label: (context) => context.l10n.browse,
-    ),
-    NavigationBarData(
-      icon: Icons.download_outlined,
-      activeIcon: Icons.download_rounded,
-      label: (context) => context.l10n.downloads,
     ),
     NavigationBarData(
       icon: Icons.more_horiz_outlined,
@@ -42,7 +37,7 @@ class NavigationBarData {
     ),
   ];
 
-  // Static list for tablet/large screens (History between Updates and Browse)
+  // Static list for tablet/large screens (History between Activity and Browse)
   static final tabletNavList = [
     NavigationBarData(
       icon: Icons.collections_bookmark_outlined,
@@ -52,7 +47,7 @@ class NavigationBarData {
     NavigationBarData(
       icon: Icons.new_releases_outlined,
       activeIcon: Icons.new_releases_rounded,
-      label: (context) => context.l10n.updates,
+      label: (context) => context.l10n.activity,
     ),
     NavigationBarData(
       icon: Icons.history_outlined,
@@ -63,11 +58,6 @@ class NavigationBarData {
       icon: Icons.explore_outlined,
       activeIcon: Icons.explore_rounded,
       label: (context) => context.l10n.browse,
-    ),
-    NavigationBarData(
-      icon: Icons.download_outlined,
-      activeIcon: Icons.download_rounded,
-      label: (context) => context.l10n.downloads,
     ),
     NavigationBarData(
       icon: Icons.more_horiz_outlined,
@@ -83,6 +73,20 @@ class NavigationBarData {
 
   // Legacy navList for backward compatibility - defaults to phone layout
   static final navList = phoneNavList;
+
+  // Shell branches: Library, Activity, History, Browse, More.
+  static const phoneBranchIndices = [0, 1, 3, 4];
+  static const tabletBranchIndices = [0, 1, 2, 3, 4];
+
+  static int branchIndexForDestination(int index, {required bool isTablet}) =>
+      (isTablet ? tabletBranchIndices : phoneBranchIndices)[index];
+
+  static int destinationIndexForBranch(int index, {required bool isTablet}) {
+    final indices = isTablet ? tabletBranchIndices : phoneBranchIndices;
+    final destination = indices.indexOf(index);
+    // Phone History deep links belong to More.
+    return destination == -1 ? indices.indexOf(4) : destination;
+  }
 
   NavigationBarData({
     required this.label,

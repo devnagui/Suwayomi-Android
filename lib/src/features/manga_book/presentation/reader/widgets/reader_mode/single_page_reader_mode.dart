@@ -15,6 +15,7 @@ import '../../../../../../utils/extensions/cache_manager_extensions.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/misc/app_utils.dart';
 import '../../../../../../utils/network/manga_cache_manager.dart';
+import '../../../../../../utils/network/reading_progress.dart';
 import '../../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_pinch_to_zoom/reader_pinch_to_zoom.dart';
@@ -22,6 +23,7 @@ import '../../../../../settings/presentation/reader/widgets/reader_scroll_animat
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../domain/manga/manga_model.dart';
+import '../../utils/reader_scroll_physics.dart';
 import '../reader_wrapper.dart';
 
 class SinglePageReaderMode extends HookConsumerWidget {
@@ -47,11 +49,14 @@ class SinglePageReaderMode extends HookConsumerWidget {
   final List<File>? offlineFiles;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cacheManager = ref.watch(mangaCacheManagerProvider);
+    final cacheManager =
+        offlineFiles == null ? ref.watch(mangaCacheManagerProvider) : null;
     final scrollController = usePageController(
-      initialPage: chapter.isRead.ifNull()
-          ? 0
-          : chapter.lastPageRead.getValueOnNullOrNegative(),
+      initialPage: ref
+          .read(readingProgressProvider.notifier)
+          .startingPage(chapter)
+          .clamp(0,
+              chapterPages.pages.isEmpty ? 0 : chapterPages.pages.length - 1),
     );
     final currentIndex = useState(scrollController.initialPage);
 
@@ -59,7 +64,7 @@ class SinglePageReaderMode extends HookConsumerWidget {
       if (onPageChanged != null) onPageChanged!(currentIndex.value);
       int currentPage = currentIndex.value;
       // Only prefetch if we have pages data
-      if (chapterPages.pages.isNotEmpty) {
+      if (chapterPages.pages.isNotEmpty && cacheManager != null) {
         // Prev page
         if (currentPage > 0 && currentPage - 1 < chapterPages.pages.length) {
           cacheManager.getServerFile(
@@ -119,8 +124,9 @@ class SinglePageReaderMode extends HookConsumerWidget {
         reverse: reverse,
         controller: scrollController,
         allowImplicitScrolling: true,
-        physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
+        physics: ref.watch(readerScrollPhysicsProvider(scrollDirection)) ??
+            const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
         itemBuilder: (BuildContext context, int index) {
           // Show loading indicator if no pages are available yet
           if (chapterPages.pages.isEmpty) {

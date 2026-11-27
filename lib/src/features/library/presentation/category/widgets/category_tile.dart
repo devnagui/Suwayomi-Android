@@ -5,11 +5,15 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../widgets/async_buttons/async_icon_button.dart';
+import '../../../../../widgets/custom_circular_progress_indicator.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../domain/category/category_model.dart';
 import '../controller/edit_category_controller.dart';
@@ -28,6 +32,23 @@ class CategoryTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final order = category.order.getValueOnNullOrNegative();
     final isDefault = category.isDefaultCategory;
+    final isDeleting = useState(false);
+
+    Future<void> deleteCategory() async {
+      if (isDeleting.value) return;
+      isDeleting.value = true;
+      try {
+        final result = await ref
+            .read(categoryControllerProvider.notifier)
+            .deleteCategory(category.id);
+        if (context.mounted) {
+          result.showToastOnError(ref.read(toastProvider));
+        }
+      } finally {
+        if (context.mounted) isDeleting.value = false;
+      }
+    }
+
     return Card(
       margin: KEdgeInsets.h16v4.size,
       child: Padding(
@@ -40,23 +61,33 @@ class CategoryTile extends HookConsumerWidget {
             ),
             Row(
               children: [
-                IconButton(
+                AsyncIconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: order <= 1
                       ? null
-                      : () => ref
-                          .read(categoryControllerProvider.notifier)
-                          .reorderCategory(category.id, order - 1),
+                      : () async {
+                          final result = await ref
+                              .read(categoryControllerProvider.notifier)
+                              .reorderCategory(category.id, order - 1);
+                          if (context.mounted) {
+                            result.showToastOnError(ref.read(toastProvider));
+                          }
+                        },
                   icon: const Icon(Icons.arrow_drop_up_rounded),
                   color: Colors.grey,
                 ),
-                IconButton(
+                AsyncIconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: order < 1 || order >= maxOrderIndex - 1
                       ? null
-                      : () => ref
-                          .read(categoryControllerProvider.notifier)
-                          .reorderCategory(category.id, order + 1),
+                      : () async {
+                          final result = await ref
+                              .read(categoryControllerProvider.notifier)
+                              .reorderCategory(category.id, order + 1);
+                          if (context.mounted) {
+                            result.showToastOnError(ref.read(toastProvider));
+                          }
+                        },
                   icon: const Icon(Icons.arrow_drop_down_rounded),
                   color: Colors.grey,
                 ),
@@ -77,7 +108,7 @@ class CategoryTile extends HookConsumerWidget {
                 ),
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  onPressed: !isDefault
+                  onPressed: !isDefault && !isDeleting.value
                       ? () => showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
@@ -88,11 +119,8 @@ class CategoryTile extends HookConsumerWidget {
                                 const PopButton(),
                                 ElevatedButton(
                                   onPressed: () {
-                                    ref
-                                        .read(
-                                            categoryControllerProvider.notifier)
-                                        .deleteCategory(category.id);
                                     Navigator.pop(context);
+                                    deleteCategory();
                                   },
                                   child: Text(context.l10n.delete),
                                 ),
@@ -100,7 +128,9 @@ class CategoryTile extends HookConsumerWidget {
                             ),
                           )
                       : null,
-                  icon: const Icon(Icons.delete_rounded),
+                  icon: isDeleting.value
+                      ? const MiniCircularProgressIndicator()
+                      : const Icon(Icons.delete_rounded),
                   color: Colors.grey,
                 ),
               ],

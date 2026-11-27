@@ -12,6 +12,7 @@ import '../../../../../widgets/emoticons.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
 import '../../../domain/manga/manga_model.dart';
+import '../../../widgets/read_ahead_summary.dart';
 import 'chapter_list_tile.dart';
 import 'manga_description.dart';
 
@@ -75,6 +76,9 @@ class _SmallScreenMangaDetailsState
                     .addMangaToLibrary(widget.mangaId),
               ),
             ),
+          ),
+          SliverToBoxAdapter(
+            child: ReadAheadSummary(mangaId: widget.mangaId),
           ),
           SliverToBoxAdapter(
             child: ListTile(

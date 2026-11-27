@@ -55,8 +55,9 @@ class DirectionalSwipeGestureHandler extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool useAdvancedGestures =
-        lastPageSwipeEnabled && !readerSwipeChapterToggle;
+    final bool useAdvancedGestures = scrollDirection == Axis.vertical &&
+        lastPageSwipeEnabled &&
+        !readerSwipeChapterToggle;
 
     if (useAdvancedGestures) {
       return _buildAdvancedGestureHandler(context);
@@ -65,7 +66,7 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     }
   }
 
-  /// Advanced gesture handler using RawGestureDetector for proper arena competition
+  /// Keep the optional vertical edge gesture from capturing lateral page pans.
   Widget _buildAdvancedGestureHandler(BuildContext context) {
     return GestureDetector(
       onLongPressStart: onLongPressStart,
@@ -73,7 +74,8 @@ class DirectionalSwipeGestureHandler extends HookWidget {
       onLongPressMoveUpdate: onLongPressMoveUpdate,
       onTap: onTap,
       behavior: HitTestBehavior.translucent,
-      onPanEnd: (details) {
+      onVerticalDragEnd: (details) {
+        if ((details.primaryVelocity?.abs() ?? 0) < 8) return;
         final swipeDirection = LastPageSwipeUtils.detectSwipeDirection(details);
 
         if (swipeDirection != null) {
@@ -96,20 +98,24 @@ class DirectionalSwipeGestureHandler extends HookWidget {
       onLongPressMoveUpdate: onLongPressMoveUpdate,
       onTap: onTap,
       behavior: HitTestBehavior.translucent,
-      onHorizontalDragEnd: (details) {
-        _handleSwipeGesture(
-          context: context,
-          details: details,
-          allowedAxis: Axis.vertical,
-        );
-      },
-      onVerticalDragEnd: (details) {
-        _handleSwipeGesture(
-          context: context,
-          details: details,
-          allowedAxis: Axis.horizontal,
-        );
-      },
+      onHorizontalDragEnd: readerSwipeChapterToggle
+          ? (details) {
+              _handleSwipeGesture(
+                context: context,
+                details: details,
+                allowedAxis: Axis.vertical,
+              );
+            }
+          : null,
+      onVerticalDragEnd: readerSwipeChapterToggle
+          ? (details) {
+              _handleSwipeGesture(
+                context: context,
+                details: details,
+                allowedAxis: Axis.horizontal,
+              );
+            }
+          : null,
       child: child,
     );
   }
@@ -177,9 +183,9 @@ class DirectionalSwipeGestureHandler extends HookWidget {
     // chapter changes. Only vertical/webtoon modes allow swipe chapter nav.
     final bool isHorizontalMode =
         resolvedReaderMode == ReaderMode.singleHorizontalLTR ||
-        resolvedReaderMode == ReaderMode.singleHorizontalRTL ||
-        resolvedReaderMode == ReaderMode.continuousHorizontalLTR ||
-        resolvedReaderMode == ReaderMode.continuousHorizontalRTL;
+            resolvedReaderMode == ReaderMode.singleHorizontalRTL ||
+            resolvedReaderMode == ReaderMode.continuousHorizontalLTR ||
+            resolvedReaderMode == ReaderMode.continuousHorizontalRTL;
     if (isHorizontalMode) {
       return NavigationAction.pageNavigation;
     }

@@ -134,7 +134,8 @@ class ReaderWrapper extends HookConsumerWidget {
 
     // On Android phones, disable swipe gestures that navigate to the
     // next/previous chapter to avoid accidental chapter changes.
-    final bool disableSwipeChapterNavigation = !context.isTablet;
+    final bool disableSwipeChapterNavigation =
+        MediaQuery.sizeOf(context).shortestSide < 600;
 
     final bool readerSwipeChapterToggle = disableSwipeChapterNavigation
         ? false

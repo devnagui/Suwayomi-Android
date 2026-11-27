@@ -55,6 +55,7 @@ void main() {
               bottomNavigationBar: MultiChaptersActionsBottomAppBar(
                 selectedChapters: selection,
                 afterOptionSelected: () async {},
+                onChaptersUpdated: (_) async {},
               ),
             ),
           ),

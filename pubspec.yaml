@@ -2,7 +2,7 @@ name: tachidesk_sorayomi
 description: A thin Android manga reader client for Suwayomi Server.
 
 publish_to: "none"
-version: 0.6.6+3
+version: 0.6.15+12
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -46,9 +46,12 @@ dependencies:
   riverpod_annotation: ^2.0.0
   scrollable_positioned_list: ^0.3.5
   shared_preferences: ^2.0.15
+  suwayomi_offline_storage:
+    path: packages/offline_storage
   shimmer: ^3.0.0
   url_launcher: ^6.1.6
   web_socket_channel: ^3.0.0
+  workmanager: ^0.10.10
 
 dev_dependencies:
   build_runner: ^2.4.14

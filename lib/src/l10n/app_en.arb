@@ -1,5 +1,28 @@
 {
     "@@locale": "en",
+    "readingProgressPending": "Reading position saved on this device; waiting to sync.",
+    "readingProgressSaveFailed": "Could not save your reading position. Please try again.",
+    "readAheadTitle": "Prepare next chapters",
+    "readAheadDescription": "Automatically prepare the next 3 chapters on this device while reading, one at a time, with retries.",
+    "readAheadWaiting": "Waiting for its turn",
+    "readAheadRequesting": "Requesting from server",
+    "readAheadDownloading": "Downloading on server",
+    "readAheadCopying": "Saving to device",
+    "readAheadRetrying": "Waiting to retry",
+    "readAheadPaused": "Paused — waiting for downloads to resume",
+    "readAheadReady": "Ready on device",
+    "readAheadFailed": "Could not prepare chapter",
+    "readAheadCancelled": "Preparation cancelled",
+    "readAheadAttempt": "Attempt {attempt}",
+    "@readAheadAttempt": {
+        "description": "Current attempt number for automatic chapter preparation",
+        "placeholders": {"attempt": {"type": "int"}}
+    },
+    "readAheadSettingSaveFailed": "Could not save this setting. Please try again.",
+    "activity": "Activity",
+    "@activity": {
+        "description": "Navigation destination and screen title combining Updates and Downloads"
+    },
     "@about": {
         "description": "Screen title and Button text of About screen"
     },
@@ -1342,7 +1365,7 @@
     "localMangaLinksRemoved": "Removed {count} missing local manga links.",
     "@localMangaLinksRemoved": {"placeholders": {"count": {"type": "int"}}},
     "forgetLocalManga": "Forget local manga",
-    "forgetLocalMangaDescription": "Clear cached library and manga queries and remove this manga's cached chapter metadata on this device only. Server data and saved page files are kept. Reconnect to reload manga metadata. If the manga still exists on the server, it may appear again.",
+    "forgetLocalMangaDescription": "Remove this manga's cached recovery metadata on this device only. The rest of the cached library, server data and saved page files are kept. Reconnect to reload manga metadata. If the manga still exists on the server, it may appear again.",
     "localMangaForgotten": "Local manga reference removed.",
     "operationLog": "Operation log",
     "operationLogDescription": "View or export the last 500 operations in this app session. Credentials, request bodies, response bodies and server URLs are not recorded.",
@@ -1362,5 +1385,7 @@
     "cancelMangaUpdate": "Cancel update",
     "cancelMangaUpdateUnsupported": "This server does not support cancelling one manga. Update the server or use Cancel all updates.",
     "authTypeBasicLegacy": "Basic Auth (legacy)",
-    "authTypeBasicLegacyDescription": "For older server setups only. Use UI Login when the server is configured for UI Login."
+    "authTypeBasicLegacyDescription": "For older server setups only. Use UI Login when the server is configured for UI Login.",
+    "saveOnDevice": "Save on device",
+    "offlineCacheFailed": "Could not save chapter on this device. Retry from the chapter or check the operation log."
 }

@@ -56,6 +56,7 @@ class BigScreenNavigationBar extends StatelessWidget {
 
     return NavigationRail(
       useIndicator: true,
+      scrollable: true,
       elevation: 5,
       extended: context.isExpandedTablet,
       labelType: context.isExpandedTablet

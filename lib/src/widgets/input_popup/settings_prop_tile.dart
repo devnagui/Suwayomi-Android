@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../features/settings/controller/server_controller.dart';
@@ -83,7 +84,7 @@ class SettingsPropTile extends StatelessWidget {
   }
 }
 
-class SwitchSettingsPropTile extends ConsumerWidget {
+class SwitchSettingsPropTile extends HookConsumerWidget {
   const SwitchSettingsPropTile({
     super.key,
     required this.subtitleString,
@@ -101,11 +102,17 @@ class SwitchSettingsPropTile extends ConsumerWidget {
 
   @override
   Widget build(context, ref) {
+    final isLoading = useState(false);
     return Tooltip(
       message: subtitleString ?? title,
       child: SwitchListTile(
         controlAffinity: ListTileControlAffinity.trailing,
-        secondary: leading,
+        secondary: isLoading.value
+            ? const SizedBox.square(
+                dimension: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : leading,
         title: titleWidget ?? Text(title!),
         value: switchProp.value.ifNull(),
         subtitle: subtitleString.isNotBlank
@@ -115,16 +122,22 @@ class SwitchSettingsPropTile extends ConsumerWidget {
               )
             : null,
         onChanged: AppUtils.returnIf(
-          switchProp.onChanged != null,
+          switchProp.onChanged != null && !isLoading.value,
           (val) async {
-            final result = await AppUtils.guard(
-              () => switchProp.onChanged!(val),
-              ref.read(toastProvider),
-            );
-            if (result != null && result is SettingsDto) {
-              ref.read(settingsProvider.notifier).updateState(result);
-            } else if (result is UserSettingsDto) {
-              ref.read(userSettingsProvider.notifier).updateState(result);
+            isLoading.value = true;
+            try {
+              final result = await AppUtils.guard(
+                () => switchProp.onChanged!(val),
+                ref.read(toastProvider),
+              );
+              if (!context.mounted) return;
+              if (result != null && result is SettingsDto) {
+                ref.read(settingsProvider.notifier).updateState(result);
+              } else if (result is UserSettingsDto) {
+                ref.read(userSettingsProvider.notifier).updateState(result);
+              }
+            } finally {
+              if (context.mounted) isLoading.value = false;
             }
           },
         ),

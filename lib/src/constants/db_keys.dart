@@ -54,13 +54,13 @@ enum DBKeys {
   volumeTapInvert(false),
   hideEmptyCategory(false),
   pinchToZoom(true),
-  smartDownloadNextChapter(false),
+  smartDownloadNextChapter(true),
   readerIgnoreSafeArea(false),
   flexScheme(FlexScheme.material),
   historyEnabled(true),
   historyRetentionDays(90),
   // Timeout Settings
-  serverRequestTimeout(15000), // milliseconds
+  serverRequestTimeout(60000), // milliseconds
   autoRefreshOnTimeout(false),
   autoRefreshRetryDelay(1000), // milliseconds
   ;

@@ -38,6 +38,34 @@ query GetChapter($id: Int!) {
   }
 }
 
+query GetChapterIndex($mangaId: Int!, $after: Cursor) {
+  chapters(
+    condition: { mangaId: $mangaId }
+    first: 500
+    after: $after
+    order: [{ by: ID, byType: ASC }]
+  ) {
+    nodes {
+      id
+      mangaId
+      url
+      sourceOrder
+      pageCount
+      user {
+        isBookmarked
+        isDownloaded
+        isRead
+        lastPageRead
+        lastReadAt
+      }
+    }
+    pageInfo {
+      ...PageInfoDto
+    }
+    totalCount
+  }
+}
+
 query GetChapterPage($after: Cursor, $before: Cursor, $condition: ChapterConditionInput, $filter: ChapterFilterInput, $first: Int, $last: Int, $offset: Int, $order: [ChapterOrderInput!]) {
   chapters(
     after: $after
